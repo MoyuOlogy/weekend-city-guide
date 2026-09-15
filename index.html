@@ -481,21 +481,31 @@ const WMO = {
   80:['阵雨','🌦️',false], 81:['强阵雨','🌧️',false], 82:['暴雨','⛈️',false], 85:['阵雪','🌨️',false], 86:['强阵雪','❄️',false],
   95:['雷阵雨','⛈️',false], 96:['雷阵雨伴冰雹','⛈️',false], 99:['强雷暴','⛈️',false]
 };
-let weather = null; // {days:[{date,code,label,emoji,tmax,tmin,pop}], live:bool}
-const MOCK_W = [
-  { code:2, tmax:22, tmin:14, pop:10 },
-  { code:0, tmax:25, tmin:16, pop:0  },
-  { code:61, tmax:19, tmin:13, pop:75 }
-];
+let weather = null; // {days:[{date,code,label,emoji,tmax,tmin,pop,ok}], live:bool}
+// 本地日期字符串（避免 toISOString 的 UTC 跨天偏差）
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+// 距离“即将到来的周六/周日”还有几天：which=1 周六，which=2 周日
+function weekendOffset(which){
+  const dow = new Date().getDay();          // 0=周日 … 6=周六
+  const target = which === 1 ? 6 : 0;
+  return (target - dow + 7) % 7;
+}
+function targetDayIndex(){ return Math.min(weekendOffset(prefs.day), (weather?.days.length ?? 1) - 1); }
+function targetWeather(){ return weather ? weather.days[targetDayIndex()] : null; }
+// 统一“会淋雨”判定：降水概率高，或天气码本身是雨雪且概率偏高
+function isWet(w){ return !!w && (w.pop >= 50 || (!w.ok && w.pop >= 25)); }
 
+const MOCK_W = [ // [天气码, 最高温, 最低温, 降水概率] —— 覆盖未来 7 天
+  [2,22,14,10],[0,25,16,0],[61,19,13,75],[1,24,15,5],[80,21,15,60],[3,20,14,30],[0,26,17,0]
+];
 function mockWeather(){
   const today = new Date();
   return {
     live:false,
     days: MOCK_W.map((m,i)=>{
-      const d = new Date(today.getTime() + i*86400000);
-      const w = WMO[m.code] || WMO[2];
-      return { date:d.toISOString().slice(0,10), code:m.code, label:w[0], emoji:w[1], ok:w[2], tmax:m.tmax, tmin:m.tmin, pop:m.pop };
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      const w = WMO[m[0]] || WMO[2];
+      return { date:ymd(d), code:m[0], label:w[0], emoji:w[1], ok:w[2], tmax:m[1], tmin:m[2], pop:m[3] };
     })
   };
 }
@@ -503,7 +513,7 @@ async function fetchWeather(city){
   const c = CITIES[city]; if(!c) return mockWeather();
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}`
     + `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max`
-    + `&timezone=auto&forecast_days=3`;
+    + `&timezone=auto&forecast_days=7`;
   const ctrl = new AbortController(); const timer = setTimeout(()=>ctrl.abort(), 6000);
   try{
     const res = await fetch(url, { signal: ctrl.signal });
@@ -525,6 +535,8 @@ async function fetchWeather(city){
 /* ---------------- 3. 偏好状态 ---------------- */
 const DEFAULT_PREFS = { city:'上海', day:1, budget:150, people:3, hours:4, types:[], extras:[] };
 let prefs = Object.assign({}, DEFAULT_PREFS, load(LS.prefs, {}));
+// 首次访问：周日打开默认看“周日”，其余默认看“周六”
+if(!localStorage.getItem(LS.prefs)) prefs.day = new Date().getDay() === 0 ? 2 : 1;
 
 function initPrefsUI(){
   const citySel = $('#fCity');
@@ -546,7 +558,7 @@ function persist(){ save(LS.prefs, prefs); }
 function scoreActivity(a, w){
   let s = 30; const reasons = [], warns = [];
   const outdoorOK = w ? w.ok : true;
-  const rainy = w ? (!w.ok || w.pop >= 50) : false;
+  const rainy = isWet(w);
 
   // 类型
   if(prefs.types.length){
@@ -597,11 +609,11 @@ function scoreActivity(a, w){
 }
 
 function renderRecs(){
-  const w = weather ? weather.days[Math.min(prefs.day, (weather.days.length-1))] : null;
+  const w = targetWeather();
   const list = ACTIVITIES.map(a => ({ a, ...scoreActivity(a, w) })).sort((x,y)=>y.score - x.score);
   const top = list.filter(x=>x.score>=45).slice(0,8);
   const show = top.length ? top : list.slice(0,6);
-  const rain = w ? (!w.ok || w.pop>=50) : false;
+  const rain = isWet(w);
 
   $('#recCount').textContent = `· ${show.length} 个候选`;
   $('#recHint').innerHTML = w
@@ -716,7 +728,7 @@ function renderCheckins(){
 }
 function addCheckin(title){
   if(!title) return toast('填一下去了哪里～'), false;
-  checkins.push({ id:uid(), title, date:$('#cDate').value || new Date().toISOString().slice(0,10),
+  checkins.push({ id:uid(), title, date:$('#cDate').value || ymd(new Date()),
                   cost:Number($('#cCost').value)||0, hours:Number($('#cHours').value)||1,
                   mood:currentMood, note:$('#cNote').value.trim() });
   save(LS.checkins, checkins); renderCheckins();
@@ -753,21 +765,25 @@ function switchView(v){
 async function refreshWeather(){
   $('#weatherBox').innerHTML = `<div class="w-main"><span class="loading"></span> 正在获取 ${esc(prefs.city)} 的天气…</div>`;
   weather = await fetchWeather(prefs.city);
-  const w = weather.days[Math.min(prefs.day, weather.days.length-1)];
-  const rain = !w.ok || w.pop>=50;
-  const tip = rain ? '☔ 有降水，优先室内活动（展览 / 桌游 / 手作 / 演出）'
-                   : (w.tmax>=30 ? '🥵 偏热，尽量避开正午，多补水' : (w.tmax<=8 ? '🧣 偏冷，穿厚一点再出门' : '🌞 天气不错，户外放心冲'));
+  const w = targetWeather();
+  const idx = targetDayIndex();
+  const wd = ['周日','周一','周二','周三','周四','周五','周六'][new Date(w.date+'T00:00:00').getDay()];
+  const when = idx===0 ? '就是今天' : (idx===1 ? '明天' : `${idx} 天后`);
+  const rain = isWet(w);
+  const tip = (rain && w.pop >= 50) ? '☔ 降水概率较高，优先室内活动（展览 / 桌游 / 手作 / 演出）'
+            : (rain ? '🌦️ 可能有零星降水，带把伞，室内更稳妥'
+            : (w.tmax>=30 ? '🥵 偏热，尽量避开正午，多补水' : (w.tmax<=8 ? '🧣 偏冷，穿厚一点再出门' : '🌞 天气不错，户外放心冲')));
   $('#weatherBox').innerHTML = `
     <div class="w-main">
       <div class="w-emoji">${w.emoji}</div>
       <div>
         <div class="w-temp">${w.tmax}° <span style="font-size:14px;color:var(--muted)">/ ${w.tmin}°</span></div>
-        <div class="w-meta">${esc(prefs.city)} · ${prefs.day===1?'周六':'周日'} ${esc(w.date)} · ${esc(w.label)} · 降水概率 ${w.pop}%</div>
+        <div class="w-meta">${esc(prefs.city)} · ${esc(prefs.day===1?'周六':'周日')}（${wd} ${esc(w.date)}，${when}）· ${esc(w.label)} · 降水概率 ${w.pop}%</div>
       </div>
     </div>
     <div class="w-side">
       <div class="w-tip">${tip}</div>
-      <div class="w-tip">${weather.live?'🛰️ 实时天气（Open-Meteo）':'⚠️ 网络不可用，已降级为示例天气'}</div>
+      <div class="w-tip">${weather.live?'🛰️ Open-Meteo 实时预报':'⚠️ 网络不可用，已降级为示例天气'}${idx>=3?'（远期预报，出发前再看一次）':''}</div>
     </div>`;
 }
 function refreshAll(){ persist(); refreshWeather().then(renderRecs); }
@@ -833,7 +849,7 @@ $('#gAdd').addEventListener('click', ()=>{
   const title = $('#gTitle').value.trim(), body = $('#gBody').value.trim();
   if(!title || !body) return toast('标题和正文都写一点吧～');
   const author = $('#tName').value.trim() || '匿名探索者';
-  guides.unshift({ id:uid(), title, body, author, date:new Date().toISOString().slice(0,10), likes:0,
+  guides.unshift({ id:uid(), title, body, author, date:ymd(new Date()), likes:0,
                    tags: $('#gTags').value.split(/[,，]/).map(s=>s.trim()).filter(Boolean) });
   save(LS.guides, guides); renderGuides(); $('#gTitle').value=''; $('#gBody').value=''; $('#gTags').value='';
   toast('攻略已发布 🚀');
@@ -857,8 +873,9 @@ $('#tName').addEventListener('input', renderTeams);
 /* ---------------- 9. 启动 ---------------- */
 (function init(){
   document.documentElement.dataset.theme = load(LS.theme, 'dark');
-  $('#cDate').value = new Date().toISOString().slice(0,10);
+  $('#cDate').value = ymd(new Date());
   initPrefsUI();
+  persist();
   renderTeams(); renderCheckins(); renderGuides();
   refreshWeather().then(renderRecs);
 })();
