@@ -1,6 +1,10 @@
-/* 颜色审计：扫描 index.html 中所有颜色，断言不存在蓝/紫色相（185°–335°） */
+/* 颜色审计：扫描 index.html 中所有颜色，断言不存在蓝/紫色相（hue 185°–335°）
+   用法： node tests/color-audit.js                                        */
 const fs = require('fs');
-const html = fs.readFileSync('D:/dsh/meituan/index.html', 'utf8');
+const path = require('path');
+const file = path.join(__dirname, '..', 'index.html');
+const html = fs.readFileSync(file, 'utf8');
+
 const colors = new Set();
 for (const m of html.matchAll(/#[0-9a-fA-F]{6}\b/g)) colors.add(m[0]);
 for (const m of html.matchAll(/#[0-9a-fA-F]{3}\b/g)) colors.add(m[0]);
@@ -8,6 +12,7 @@ for (const m of html.matchAll(/rgba?\(([^)]+)\)/g)) {
   const p = m[1].split(',').map(s => s.trim());
   if (p.length >= 3 && p.slice(0, 3).every(x => /^\d+$/.test(x))) colors.add('rgb(' + p.slice(0, 3).join(',') + ')');
 }
+
 const toRgb = c => {
   if (c.startsWith('rgb')) return c.replace(/rgba?\(|\)/g, '').split(',').map(Number);
   let h = c.slice(1);
@@ -27,12 +32,17 @@ const hsl = (r, g, b) => {
   }
   return [h, s, l];
 };
+
 const bad = [], kept = [];
 for (const c of colors) {
   const [r, g, b] = toRgb(c), [h, s, l] = hsl(r, g, b);
-  if (s > 0.15 && l > 0.08 && l < 0.92 && h >= 185 && h <= 335) bad.push(`${c}  hue=${h.toFixed(0)}° sat=${(s * 100).toFixed(0)}% light=${(l * 100).toFixed(0)}%`);
-  else if (s > 0.15 && l > 0.08 && l < 0.92) kept.push(`${c}  hue=${h.toFixed(0)}°`);
+  // 只看真正有色彩、且不过亮不过暗的颜色；近乎黑白的颜色色相无意义
+  const chromatic = s > 0.15 && l > 0.08 && l < 0.92;
+  if (!chromatic) continue;
+  if (h >= 185 && h <= 335) bad.push(`${c}  hue=${h.toFixed(0)}° sat=${(s * 100).toFixed(0)}% light=${(l * 100).toFixed(0)}%`);
+  else kept.push(`${c}  hue=${h.toFixed(0)}°`);
 }
+
 console.log(`扫描到 ${colors.size} 个颜色，其中有彩色 ${kept.length} 个：`);
 kept.sort().forEach(k => console.log('   ' + k));
 if (bad.length) {
