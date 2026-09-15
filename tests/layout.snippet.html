@@ -1,4 +1,4 @@
-﻿<pre id="TESTOUT" style="display:none"></pre>
+<pre id="TESTOUT" style="display:none"></pre>
 <script>
 (async function(){
   const R = [];
@@ -6,18 +6,30 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const waitFor = async (fn, tries = 40) => { for(let i = 0; i < tries; i++){ if(fn()) return true; await sleep(150); } return false; };
   const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+  /* 无头浏览器的虚拟时钟不推进 CSS transition，属性会永远停在起始值
+     （例如弹窗的 transform 一直等于 translateY(102%)），布局断言就没法量。
+     这里注入样式把过渡/动画关掉，让最终布局立即生效 —— 只影响测试环境。 */
+  const KILL = '*,*::before,*::after{transition:none !important;animation:none !important}';
+  const inject = doc => {
+    try { const s = doc.createElement('style'); s.textContent = KILL; doc.head.appendChild(s); } catch(e){}
+  };
   const mkFrame = (w, h) => new Promise(res => {
     const f = document.createElement('iframe');
     f.style.cssText = `position:fixed;left:-9999px;top:0;width:${w}px;height:${h}px;border:0`;
     f.src = '../index.html';                 // 测试页位于 tests/，根目录即 index.html
-    f.onload = async () => { await waitFor(() => f.contentDocument.querySelectorAll('#feed .note').length > 0, 60); res(f); };
+    f.onload = async () => {
+      inject(f.contentDocument);
+      await waitFor(() => f.contentDocument.querySelectorAll('#feed .note').length > 0, 60);
+      res(f);
+    };
     document.body.appendChild(f);
   });
   const noOverflow = d => d.body.scrollWidth <= d.documentElement.clientWidth + 1;
 
   try{
-    /* ============ A. 当前视口（无头默认 ~800px，走移动端布局） ============ */
+    /* ============ A. 当前视口（无头默认 ~731px，走移动端布局） ============ */
     await waitFor(() => document.querySelectorAll('#feed .note').length > 0, 40);
+    inject(document);                       // 先关掉过渡，保证下面的几何量测是最终值
     ok('分类条共 11 项（推荐 + 10 类）', document.querySelectorAll('#catbar .cat').length === 11);
     ok('分类条为纯文字（无 emoji，与小红书一致）',
        [...document.querySelectorAll('#catbar .cat')].every(e => !EMOJI.test(e.textContent)));
@@ -81,6 +93,54 @@
       const items = dd.querySelectorAll('.rail-item');
       return items.length >= 5 && dd.querySelectorAll('.rail-item.on').length === 1;
     })());
+
+    /* ============ D. 弹窗定位：桌面居中 / 移动贴底 ============ */
+    document.querySelector('#filterBtn').click();
+    await sleep(200);
+    const sheetM = document.querySelector('#sheetForm');
+    const rM = sheetM.getBoundingClientRect(), vhM = document.documentElement.clientHeight;
+    ok('窄屏：弹窗吸附底部', Math.abs(rM.bottom - vhM) < 4);
+    ok('窄屏：不超过 88vh，上方仍能看到页面', rM.top >= 20 && rM.height <= vhM * 0.88 + 1);
+    ok('窄屏：顶部圆角 / 底部直角（抽屉样式）', (() => {
+      const cs = getComputedStyle(sheetM);
+      return parseFloat(cs.borderTopLeftRadius) >= 12 && parseFloat(cs.borderBottomLeftRadius) === 0;
+    })());
+    document.querySelector('#sheetForm [data-act="close"]').click();
+    await sleep(150);
+
+    dd.querySelector('#filterBtn').click();
+    await sleep(250);
+    const sheetD = dd.querySelector('#sheetForm');
+    const rD = sheetD.getBoundingClientRect();
+    const vhD = dd.documentElement.clientHeight, vwD = dd.documentElement.clientWidth;
+    ok('1280px：弹窗垂直居中', Math.abs((rD.top + rD.bottom) / 2 - vhD / 2) < 24);
+    ok('1280px：弹窗水平居中', Math.abs((rD.left + rD.right) / 2 - vwD / 2) < 24);
+    ok('1280px：★ 不吸附底部', rD.bottom < vhD - 40 && rD.top > 40);
+    ok('1280px：四角统一圆角（弹窗样式）', (() => {
+      const cs = dw.getComputedStyle(sheetD);
+      return parseFloat(cs.borderTopLeftRadius) === parseFloat(cs.borderBottomLeftRadius) &&
+             parseFloat(cs.borderTopLeftRadius) >= 12;
+    })());
+    ok('1280px：拖拽把手已隐藏', dw.getComputedStyle(sheetD.querySelector('.grab')).display === 'none');
+    dd.querySelector('#sheetForm [data-act="close"]').click();
+    await sleep(150);
+
+    const idD = dd.querySelector('#feed .note').dataset.id;
+    dw.openDetail(idD);
+    await sleep(250);
+    const rd = dd.querySelector('#sheetDetail').getBoundingClientRect();
+    ok('1280px：详情弹窗居中', Math.abs((rd.top + rd.bottom) / 2 - vhD / 2) < 24);
+    ok('1280px：★ 详情为左图右文两栏', dw.getComputedStyle(dd.querySelector('#sheetDetail .dwrap')).display === 'flex');
+    dw.openSheet(null);
+    await sleep(150);
+
+    const idM = md.querySelector('#feed .note').dataset.id;
+    mw.openDetail(idM);
+    await sleep(250);
+    const vhM2 = md.documentElement.clientHeight;
+    ok('375px：详情弹窗贴底', Math.abs(md.querySelector('#sheetDetail').getBoundingClientRect().bottom - vhM2) < 4);
+    ok('375px：★ 详情为单列（图片在上）', mw.getComputedStyle(md.querySelector('#sheetDetail .dwrap')).display === 'block');
+    mw.openSheet(null);
   }catch(e){
     R.push('FAIL :: 运行异常 ' + (e && e.message));
   }
