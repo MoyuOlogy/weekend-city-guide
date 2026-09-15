@@ -1,2 +1,5 @@
 ﻿node_modules/
 *.log
+
+# 小红书参考页面（本地素材，不属于项目产物）
+xiaohongshu.txt

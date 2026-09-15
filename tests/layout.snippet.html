@@ -1,4 +1,4 @@
-<pre id="TESTOUT" style="display:none"></pre>
+﻿<pre id="TESTOUT" style="display:none"></pre>
 <script>
 (async function(){
   const R = [];
@@ -31,7 +31,7 @@
       const cs = getComputedStyle(note);
       return cs.backgroundColor === 'rgba(0, 0, 0, 0)' && cs.borderTopWidth === '0px';
     })());
-    ok('封面为圆角', parseFloat(getComputedStyle(document.querySelector('#feed .cover')).borderRadius) >= 8);
+    ok('封面为圆角', parseFloat(getComputedStyle(document.querySelector('#feed .note .cover')).borderRadius) >= 8);
     ok('★ 卡片默认可见：不依赖动画/过渡', (() => {
       const clone = note.cloneNode(true);
       clone.classList.remove('anim');

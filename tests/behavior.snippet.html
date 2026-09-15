@@ -1,4 +1,4 @@
-<pre id="TESTOUT" style="display:none"></pre>
+﻿<pre id="TESTOUT" style="display:none"></pre>
 <script>
 (async function(){
   const R = [];
@@ -14,22 +14,22 @@
     ok('信息流渲染出卡片', document.querySelectorAll('#feed .note').length > 0);
     ok('瀑布流为多列', document.querySelectorAll('#feed .mcol').length >= 2);
     ok('卡片含封面/标题/点赞', !!document.querySelector('#feed .note .cover') &&
-        !!document.querySelector('#feed .note .note-title') &&
-        !!document.querySelector('#feed .note .like'));
-    const scores = Array.from(document.querySelectorAll('#feed .note .match')).map(e => parseInt(e.textContent));
+        !!document.querySelector('#feed .note .title') &&
+        !!document.querySelector('#feed .note .like-wrapper'));
+    const scores = Array.from(document.querySelectorAll('#feed .note .badge.tr')).map(e => parseInt(e.textContent));
     ok('匹配度最高的排在第一列第一位', scores.length > 0 && scores[0] === Math.max(...scores));
     ok('天气条渲染出城市', /上海/.test(document.querySelector('#weatherBar').textContent));
 
     /* ---------- B. 筛选 / 搜索 ---------- */
     document.querySelectorAll('#catbar .cat')[4].click();     // 第 5 项 = 徒步
     const catNow = document.querySelector('#catbar .cat.on').dataset.cat;
-    const feedCount = document.querySelectorAll('#feed .note-title').length;
+    const feedCount = document.querySelectorAll('#feed .note .title').length;
     ok('点击分类后筛选生效', feedCount > 0 && catNow !== '全部');
     document.querySelectorAll('#catbar .cat')[0].click();     // 回到推荐
 
     const q = document.querySelector('#q');
     q.value = '桌游'; q.dispatchEvent(new Event('input', { bubbles:true }));
-    const hitTitles = Array.from(document.querySelectorAll('#feed .note-title')).map(e => e.textContent);
+    const hitTitles = Array.from(document.querySelectorAll('#feed .note .title')).map(e => e.textContent);
     ok('搜索能命中活动', hitTitles.length > 0 && hitTitles.length <= 24);
     q.value = '不存在的东西xyz'; q.dispatchEvent(new Event('input', { bubbles:true }));
     ok('无结果时显示空状态', !!document.querySelector('#feed .empty'));
@@ -50,15 +50,15 @@
     const card = document.querySelector('#feed .note');
     const actId = card.dataset.id;
     const c0 = likeCount(actId);
-    card.querySelector('.like').click();
+    card.querySelector('.like-wrapper').click();
     ok('点赞计数 +1', likeCount(actId) === c0 + 1);
-    ok('点赞按钮进入选中态', document.querySelector('#feed .note .like').classList.contains('on'));
+    ok('点赞按钮进入选中态', document.querySelector('#feed .note .like-wrapper').classList.contains('on'));
     ok('点赞写入 localStorage', localStorage.getItem('wcg.store.v2').includes('"likes"'));
-    document.querySelector('#feed .note .like').click();
+    document.querySelector('#feed .note .like-wrapper').click();
     ok('再次点击取消赞', likeCount(actId) === c0);
 
     /* 双击封面点赞 */
-    const wrap2 = document.querySelector('#feed .note .cover-wrap');
+    const wrap2 = document.querySelector('#feed .note .cover');
     const id2 = wrap2.dataset.id;
     const c2 = likeCount(id2);
     tap(wrap2); tap(wrap2);
@@ -66,7 +66,7 @@
     ok('双击封面点赞生效', likeCount(id2) === c2 + 1);
 
     /* 单击封面打开详情 */
-    const wrap3 = document.querySelector('#feed .note .cover-wrap');
+    const wrap3 = document.querySelector('#feed .note .cover');
     tap(wrap3);
     await sleep(430);
     ok('单击封面打开详情弹层', document.querySelector('#sheetDetail').classList.contains('on'));
