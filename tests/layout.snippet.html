@@ -1,0 +1,91 @@
+<pre id="TESTOUT" style="display:none"></pre>
+<script>
+(async function(){
+  const R = [];
+  const ok = (n, c) => R.push((c ? 'PASS' : 'FAIL') + ' :: ' + n);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const waitFor = async (fn, tries = 40) => { for(let i = 0; i < tries; i++){ if(fn()) return true; await sleep(150); } return false; };
+  const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+  const mkFrame = (w, h) => new Promise(res => {
+    const f = document.createElement('iframe');
+    f.style.cssText = `position:fixed;left:-9999px;top:0;width:${w}px;height:${h}px;border:0`;
+    f.src = '../index.html';                 // 测试页位于 tests/，根目录即 index.html
+    f.onload = async () => { await waitFor(() => f.contentDocument.querySelectorAll('#feed .note').length > 0, 60); res(f); };
+    document.body.appendChild(f);
+  });
+  const noOverflow = d => d.body.scrollWidth <= d.documentElement.clientWidth + 1;
+
+  try{
+    /* ============ A. 当前视口（无头默认 ~800px，走移动端布局） ============ */
+    await waitFor(() => document.querySelectorAll('#feed .note').length > 0, 40);
+    ok('分类条共 11 项（推荐 + 10 类）', document.querySelectorAll('#catbar .cat').length === 11);
+    ok('分类条为纯文字（无 emoji，与小红书一致）',
+       [...document.querySelectorAll('#catbar .cat')].every(e => !EMOJI.test(e.textContent)));
+    ok('顶栏为 sticky', getComputedStyle(document.querySelector('.topbar')).position === 'sticky');
+    ok('分类条位于 sticky 容器内部（否则吸不住顶）',
+       document.querySelector('.topbar').contains(document.querySelector('.catbar')));
+    ok('信息流渲染出真实卡片', document.querySelectorAll('#feed .note').length > 0);
+
+    const note = document.querySelector('#feed .note');
+    ok('卡片无白色盒子（无边框 + 透明底）', (() => {
+      const cs = getComputedStyle(note);
+      return cs.backgroundColor === 'rgba(0, 0, 0, 0)' && cs.borderTopWidth === '0px';
+    })());
+    ok('封面为圆角', parseFloat(getComputedStyle(document.querySelector('#feed .cover')).borderRadius) >= 8);
+    ok('★ 卡片默认可见：不依赖动画/过渡', (() => {
+      const clone = note.cloneNode(true);
+      clone.classList.remove('anim');
+      document.querySelector('#feed').appendChild(clone);
+      const o = getComputedStyle(clone).opacity;
+      clone.remove();
+      return o === '1';
+    })());
+    ok('卡片带入场动画类名 anim（渐进增强）', note.classList.contains('anim'));
+
+    /* ============ B. 窄屏 iframe：375px 手机 ============ */
+    const m = await mkFrame(375, 700);
+    const md = m.contentDocument, mw = m.contentWindow;
+    ok('375px：左侧导航隐藏', mw.getComputedStyle(md.querySelector('.rail')).display === 'none');
+    ok('375px：底部 Tab 显示', mw.getComputedStyle(md.querySelector('.tabbar')).display !== 'none');
+    ok('375px：瀑布流 2 列', md.querySelectorAll('#feed .mcol').length === 2);
+    ok('375px：★ 无横向溢出', noOverflow(md));
+    ok('375px：5 个底部 Tab 全在视口内', (() => {
+      const items = [...md.querySelectorAll('.tabbar .tb')], vw = md.documentElement.clientWidth;
+      return items.length === 5 && items.every(e => { const r = e.getBoundingClientRect(); return r.right <= vw + 1 && r.left >= -1; });
+    })());
+    ok('375px：卡片宽度合理（两列各占约一半）', (() => {
+      const cs = [...md.querySelectorAll('#feed .mcol .note')].slice(0, 2).map(e => e.getBoundingClientRect().width);
+      const vw = md.documentElement.clientWidth;
+      return cs.length === 2 && cs.every(w => w > vw * 0.35 && w < vw * 0.6);
+    })());
+    ok('375px：顶栏搜索框在视口内', (() => {
+      const r = md.querySelector('.searchbox').getBoundingClientRect();
+      return r.left >= -1 && r.right <= md.documentElement.clientWidth + 1;
+    })());
+
+    /* ============ C. 宽屏 iframe：1280px 桌面 ============ */
+    const d = await mkFrame(1280, 820);
+    const dd = d.contentDocument, dw = d.contentWindow;
+    ok('1280px：左侧导航显示', dw.getComputedStyle(dd.querySelector('.rail')).display === 'flex');
+    ok('1280px：底部 Tab 隐藏', dw.getComputedStyle(dd.querySelector('.tabbar')).display === 'none');
+    ok('1280px：瀑布流 ≥4 列', dd.querySelectorAll('#feed .mcol').length >= 4);
+    ok('1280px：主内容避开侧栏（shell 左移留白）', dd.querySelector('.shell').getBoundingClientRect().left >= 150);
+    ok('1280px：搜索框基本居中', (() => {
+      const r = dd.querySelector('.searchbox').getBoundingClientRect();
+      const expect = (dd.documentElement.clientWidth + 200) / 2;   // 内容区（右侧 200px 侧栏）的中心
+      return Math.abs((r.left + r.right) / 2 - expect) < 140;
+    })());
+    ok('1280px：显示器上不出现底部 Tab 的遮挡留白', parseFloat(dw.getComputedStyle(dd.querySelector('.masonry')).paddingBottom) < 60);
+    ok('1280px：★ 无横向溢出', noOverflow(dd));
+    ok('1280px：侧栏导航项 ≥5 个且有高亮', (() => {
+      const items = dd.querySelectorAll('.rail-item');
+      return items.length >= 5 && dd.querySelectorAll('.rail-item.on').length === 1;
+    })());
+  }catch(e){
+    R.push('FAIL :: 运行异常 ' + (e && e.message));
+  }
+  const fails = R.filter(r => r.startsWith('FAIL'));
+  document.querySelector('#TESTOUT').textContent = 'TESTS ' + (R.length - fails.length) + '/' + R.length + ' PASSED\n' + R.join('\n');
+  document.title = fails.length ? ('TESTS FAILED: ' + fails.length) : 'TESTS OK';
+})();
+</script>

@@ -1,15 +1,17 @@
 ﻿# 周末探索 · 自动化验证
 #
-# 用法（在仓库根目录，Windows PowerShell 5.1 或 PowerShell 7 均可）：
+# 用法（仓库根目录，Windows PowerShell 5.1 或 PowerShell 7 均可）：
 #   powershell -File tests\run-tests.ps1
 #   （PowerShell 7： pwsh -File tests/run-tests.ps1 ）
 #
-# 做三件事：
-#   1. 颜色审计：断言全站没有蓝/紫色相（hue 185°–335°）
-#   2. 行为测试：把 tests/behavior.snippet.html 注入 index.html，用真实浏览器跑 47 项断言
-#   3. 同步测试：把 tests/sync.snippet.html 注入 index.html，真连 textdb.dev 跑跨设备同步
+# 四套验证：
+#   1. 颜色审计   断言全站没有蓝/紫色相（hue 185°–335°）
+#   2. 行为测试   注入 behavior.snippet.html，真实浏览器跑 47 项交互断言
+#   3. 布局测试   注入 layout.snippet.html，用 iframe 精确模拟 375px / 1280px 验证桌面与移动端
+#   4. 同步测试   注入 sync.snippet.html，真连 textdb.dev 跑跨设备同步
 #
-# 依赖：Node.js（颜色审计）、Microsoft Edge（无头浏览器）。测试页面会被写到 tests/_tmp-*.html，跑完即删。
+# 依赖：Node.js（颜色审计）、Microsoft Edge 或 Chrome（无头浏览器）。
+# 测试页面写到 tests/_tmp-*.html，跑完即删。
 
 # 注意：不能设成 'Stop' —— Edge 会把无关警告写进 stderr，PS 5.1 会把它当终止错误
 $ErrorActionPreference = 'Continue'
@@ -35,7 +37,11 @@ function Invoke-BrowserSuite {
   $profile = Join-Path $env:TEMP ("wcgtests-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
   $dump = Join-Path $env:TEMP ("wcgdump-" + [guid]::NewGuid().ToString('N').Substring(0, 8) + ".html")
   $uri = 'file:///' + ($tmp -replace '\\', '/')
-  & $browser --headless=new --disable-gpu --no-sandbox "--user-data-dir=$profile" "--virtual-time-budget=$BudgetMs" --dump-dom $uri 2>$null | Out-File -Encoding UTF8 $dump
+  # --allow-file-access-from-files：布局测试需要在 iframe 里读同源文档
+  # --force-prefers-reduced-motion：触发无障碍降级分支，同时避免动画冻结导致截图/内容不可见
+  & $browser --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files `
+      --force-prefers-reduced-motion "--user-data-dir=$profile" "--virtual-time-budget=$BudgetMs" --dump-dom $uri 2>$null |
+    Out-File -Encoding UTF8 $dump
 
   $dom = Get-Content -Raw -Encoding UTF8 $dump
   $m = [regex]::Match($dom, '(?s)<pre id="TESTOUT"[^>]*>(.*?)</pre>')
@@ -48,21 +54,24 @@ function Invoke-BrowserSuite {
   return @{ Text = $text.Trim(); Failed = $failed }
 }
 
+function Invoke-Suite {
+  param([string]$Title, [string]$Snippet, [int]$BudgetMs)
+  Write-Host "`n===== $Title =====" -ForegroundColor Cyan
+  $r = Invoke-BrowserSuite -SnippetName $Snippet -BudgetMs $BudgetMs
+  $r.Text -split "`n" | Where-Object { $_ -match 'TESTS|^FAIL|★' } | ForEach-Object { Write-Host $_ }
+  if ($r.Failed -gt 0) { return 1 }
+  return 0
+}
+
 $exit = 0
 
-Write-Host "`n===== 1/3 颜色审计（禁用蓝紫） =====" -ForegroundColor Cyan
+Write-Host "`n===== 1/4 颜色审计（禁用蓝紫） =====" -ForegroundColor Cyan
 node (Join-Path $PSScriptRoot 'color-audit.js')
 if ($LASTEXITCODE -ne 0) { $exit = 1 }
 
-Write-Host "`n===== 2/3 行为测试 =====" -ForegroundColor Cyan
-$r = Invoke-BrowserSuite -SnippetName 'behavior.snippet.html' -BudgetMs 20000
-$r.Text -split "`n" | Where-Object { $_ -match 'TESTS|^FAIL' }
-if ($r.Failed -gt 0) { $exit = 1 }
-
-Write-Host "`n===== 3/3 跨设备同步测试（真实网络） =====" -ForegroundColor Cyan
-$r2 = Invoke-BrowserSuite -SnippetName 'sync.snippet.html' -BudgetMs 30000
-$r2.Text -split "`n" | Where-Object { $_ -match 'TESTS|^FAIL|^PASS :: ★' }
-if ($r2.Failed -gt 0) { $exit = 1 }
+$exit += Invoke-Suite -Title '2/4 行为测试'              -Snippet 'behavior.snippet.html' -BudgetMs 20000
+$exit += Invoke-Suite -Title '3/4 布局与移动端适配'       -Snippet 'layout.snippet.html'   -BudgetMs 40000
+$exit += Invoke-Suite -Title '4/4 跨设备同步（真实网络）' -Snippet 'sync.snippet.html'     -BudgetMs 30000
 
 if ($exit -eq 0) { Write-Host "`n全部通过 ✅" -ForegroundColor Green } else { Write-Host "`n存在失败项 ❌" -ForegroundColor Red }
 exit $exit
