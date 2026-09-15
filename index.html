@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>周末城市探索指南 · Weekend City Guide</title>
+<meta name="description" content="按偏好、天气、预算推荐本地周末活动，支持组队出发、打卡记录、攻略分享。" />
+<style>
+  :root{
+    --bg:#0b1020;
+    --bg2:#121a33;
+    --card:rgba(255,255,255,.06);
+    --card-strong:rgba(255,255,255,.1);
+    --stroke:rgba(255,255,255,.12);
+    --text:#eef2ff;
+    --muted:#9aa6c9;
+    --accent:#5b8cff;
+    --accent2:#31d0aa;
+    --warn:#ffb84d;
+    --danger:#ff6b81;
+    --shadow:0 18px 40px rgba(3,7,22,.45);
+    --radius:18px;
+  }
+  html[data-theme="light"]{
+    --bg:#f5f7ff;
+    --bg2:#ffffff;
+    --card:rgba(255,255,255,.85);
+    --card-strong:#ffffff;
+    --stroke:rgba(20,30,70,.1);
+    --text:#131a33;
+    --muted:#63708f;
+    --shadow:0 14px 34px rgba(30,46,110,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1100px 600px at 12% -10%, rgba(91,140,255,.35), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(49,208,170,.25), transparent 55%),
+      linear-gradient(160deg,var(--bg),var(--bg2));
+    background-attachment:fixed;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  button,input,select,textarea{font:inherit;color:inherit}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px 16px 96px}
+
+  /* ---------- hero ---------- */
+  .hero{
+    background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);
+    padding:18px 18px 16px;box-shadow:var(--shadow);backdrop-filter:blur(12px);
+  }
+  .hero-top{display:flex;align-items:center;gap:12px;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:.2px}
+  .brand .dot{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:18px;
+    background:linear-gradient(140deg,var(--accent),var(--accent2));box-shadow:0 8px 20px rgba(91,140,255,.4)}
+  .sub{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.6}
+  .icon-btn{
+    background:var(--card-strong);border:1px solid var(--stroke);border-radius:12px;
+    padding:8px 12px;cursor:pointer;font-size:13px;transition:.18s;
+  }
+  .icon-btn:hover{transform:translateY(-1px);border-color:var(--accent)}
+
+  .weather{margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+  .w-main{
+    flex:1 1 260px;display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;
+    background:linear-gradient(120deg,rgba(91,140,255,.22),rgba(49,208,170,.16));border:1px solid var(--stroke);
+  }
+  .w-emoji{font-size:34px;line-height:1}
+  .w-temp{font-size:24px;font-weight:800}
+  .w-meta{color:var(--muted);font-size:12px;margin-top:2px}
+  .w-side{display:flex;flex-direction:column;gap:6px;justify-content:center;min-width:180px;flex:0 1 220px}
+  .w-tip{font-size:12px;color:var(--muted);line-height:1.5}
+
+  .tabs{display:flex;gap:8px;margin:18px 0 14px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    white-space:nowrap;padding:9px 16px;border-radius:999px;border:1px solid var(--stroke);
+    background:var(--card);cursor:pointer;font-size:14px;transition:.18s;
+  }
+  .tab:hover{border-color:var(--accent)}
+  .tab.active{background:linear-gradient(120deg,var(--accent),#7aa2ff);border-color:transparent;font-weight:700;color:#fff}
+
+  .grid{display:grid;gap:16px}
+  @media(min-width:880px){ .grid.two{grid-template-columns:320px 1fr;align-items:start} }
+
+  .panel{
+    background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);
+    padding:16px;box-shadow:var(--shadow);backdrop-filter:blur(12px);
+  }
+  .panel h2{margin:0 0 4px;font-size:16px;display:flex;align-items:center;gap:8px}
+  .panel .hint{color:var(--muted);font-size:12px;margin:0 0 14px;line-height:1.5}
+  .field{margin-bottom:14px}
+  .field > label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600;letter-spacing:.3px}
+  select,input[type=text],input[type=number],input[type=date],textarea{
+    width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--stroke);
+    background:rgba(127,150,255,.07);outline:none;transition:.15s;
+  }
+  select:focus,input:focus,textarea:focus{border-color:var(--accent);background:rgba(91,140,255,.12)}
+  textarea{resize:vertical;min-height:76px;line-height:1.6}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .row{display:flex;gap:10px}
+  .row > *{flex:1}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    padding:7px 13px;border-radius:999px;border:1px solid var(--stroke);background:rgba(127,150,255,.07);
+    cursor:pointer;font-size:13px;transition:.15s;user-select:none;
+  }
+  .chip:hover{border-color:var(--accent)}
+  .chip.on{background:linear-gradient(120deg,var(--accent),var(--accent2));border-color:transparent;color:#04122a;font-weight:700}
+
+  .btn{
+    padding:11px 16px;border-radius:13px;border:1px solid transparent;cursor:pointer;font-weight:700;font-size:14px;
+    background:linear-gradient(120deg,var(--accent),#7aa2ff);color:#fff;transition:.18s;width:100%;
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(91,140,255,.35)}
+  .btn.ghost{background:transparent;border-color:var(--stroke);color:var(--text)}
+  .btn.ghost:hover{border-color:var(--accent);box-shadow:none}
+  .btn.mini{width:auto;padding:7px 12px;font-size:12px;border-radius:10px}
+  .btn.danger{background:transparent;border-color:rgba(255,107,129,.5);color:var(--danger)}
+
+  .cards{display:grid;gap:14px}
+  @media(min-width:640px){ .cards.two{grid-template-columns:1fr 1fr} }
+  .card{
+    background:var(--card-strong);border:1px solid var(--stroke);border-radius:16px;padding:15px;
+    transition:.2s;position:relative;overflow:hidden;
+  }
+  .card:hover{transform:translateY(-3px);border-color:rgba(91,140,255,.55)}
+  .card .top{display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
+  .card h3{margin:0;font-size:15.5px;line-height:1.45}
+  .card .type{font-size:11px;color:var(--muted);margin-top:3px}
+  .score{
+    flex:0 0 auto;text-align:center;border-radius:12px;padding:6px 9px;font-weight:800;font-size:13px;
+    background:linear-gradient(140deg,rgba(91,140,255,.28),rgba(49,208,170,.24));border:1px solid var(--stroke);
+  }
+  .score small{display:block;font-weight:600;font-size:9.5px;color:var(--muted);letter-spacing:.5px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin:11px 0 9px}
+  .meta span{
+    font-size:11.5px;color:var(--muted);background:rgba(127,150,255,.1);border:1px solid var(--stroke);
+    padding:3px 9px;border-radius:999px;
+  }
+  .desc{font-size:13px;color:var(--muted);line-height:1.65;margin:0 0 10px}
+  .reasons{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .reasons b{
+    font-size:11px;font-weight:600;padding:3px 9px;border-radius:8px;color:#04122a;
+    background:linear-gradient(120deg,rgba(49,208,170,.95),rgba(140,235,190,.95));
+  }
+  .reasons b.warn{background:linear-gradient(120deg,rgba(255,184,77,.95),rgba(255,214,140,.95))}
+  .card .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .card .actions .btn{width:auto;flex:1 1 auto}
+  .best{border-color:rgba(49,208,170,.6)}
+  .best::after{
+    content:"本周最佳 Plan";position:absolute;top:0;right:0;font-size:10.5px;font-weight:800;color:#04122a;
+    background:linear-gradient(120deg,var(--accent2),#9df0cf);padding:4px 10px;border-bottom-left-radius:12px;
+  }
+
+  .list{display:grid;gap:12px}
+  .item{
+    background:var(--card-strong);border:1px solid var(--stroke);border-radius:14px;padding:14px;
+  }
+  .item .head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .item h4{margin:0;font-size:14.5px}
+  .item .small{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.6}
+  .bar{height:7px;border-radius:99px;background:rgba(127,150,255,.16);overflow:hidden;margin-top:10px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .avatars{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .avatars span{
+    font-size:11.5px;padding:3px 9px;border-radius:999px;border:1px solid var(--stroke);background:rgba(127,150,255,.12)
+  }
+  .timeline{display:grid;gap:12px;position:relative;padding-left:6px}
+  .tl{
+    border-left:2px solid rgba(91,140,255,.4);padding:0 0 4px 14px;position:relative;
+  }
+  .tl::before{
+    content:"";position:absolute;left:-6px;top:6px;width:10px;height:10px;border-radius:50%;
+    background:linear-gradient(140deg,var(--accent),var(--accent2));
+  }
+  .tl h4{margin:0;font-size:14.5px}
+  .tl .small{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+  .stat{background:var(--card-strong);border:1px solid var(--stroke);border-radius:14px;padding:12px;text-align:center}
+  .stat b{display:block;font-size:19px}
+  .stat span{font-size:11.5px;color:var(--muted)}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:26px 12px;line-height:1.7;
+    border:1px dashed var(--stroke);border-radius:14px}
+  .tagrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .tagrow span{font-size:11px;color:var(--accent);background:rgba(91,140,255,.14);padding:2px 8px;border-radius:7px}
+  .foot{margin-top:26px;text-align:center;color:var(--muted);font-size:11.5px;line-height:1.8}
+  .foot a{color:var(--accent);text-decoration:none}
+
+  #toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);opacity:0;pointer-events:none;
+    background:rgba(12,20,44,.95);color:#eef2ff;border:1px solid rgba(255,255,255,.16);
+    padding:11px 18px;border-radius:999px;font-size:13px;transition:.25s;z-index:99;box-shadow:var(--shadow);
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  [hidden]{display:none !important}
+  .loading{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid rgba(255,255,255,.3);
+    border-top-color:#fff;animation:spin .8s linear infinite;vertical-align:-2px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .fade{animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="hero-top">
+      <div class="brand"><span class="dot">🧭</span> 周末城市探索指南</div>
+      <button class="icon-btn" id="themeBtn" title="切换主题">🌗 主题</button>
+    </div>
+    <p class="sub">别再纠结“周末去哪玩” —— 选好城市和偏好，30 秒生成一份结合 <b>天气 · 预算 · 同行人数</b> 的周末方案，还能组队出发、打卡记录、分享攻略。</p>
+    <div class="weather" id="weatherBox"></div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-view="explore">🔍 探索推荐</button>
+    <button class="tab" data-view="team">👥 组队出发</button>
+    <button class="tab" data-view="checkin">📍 打卡记录</button>
+    <button class="tab" data-view="guide">📝 攻略分享</button>
+  </nav>
+
+  <!-- ============ 探索 ============ -->
+  <section id="view-explore">
+    <div class="grid two">
+      <div class="panel">
+        <h2>⚙️ 我的周末偏好</h2>
+        <p class="hint">改任意一项，右侧推荐会实时重排。</p>
+
+        <div class="field">
+          <label>城市</label>
+          <select id="fCity"></select>
+        </div>
+
+        <div class="field">
+          <label>哪天出发</label>
+          <select id="fDay">
+            <option value="1">本周六</option>
+            <option value="2">本周日</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>人均预算：<b id="budgetVal">150</b> 元</label>
+          <input type="range" id="fBudget" min="0" max="400" step="10" value="150" />
+        </div>
+
+        <div class="field">
+          <label>同行人数：<b id="peopleVal">3</b> 人</label>
+          <input type="range" id="fPeople" min="1" max="12" step="1" value="3" />
+        </div>
+
+        <div class="field">
+          <label>可支配时长</label>
+          <div class="chips" id="fHours">
+            <div class="chip" data-hours="2">2 小时</div>
+            <div class="chip on" data-hours="4">半天</div>
+            <div class="chip" data-hours="9">一整天</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>想玩什么（可多选，不选=都可以）</label>
+          <div class="chips" id="fTypes"></div>
+        </div>
+
+        <div class="field">
+          <label>额外偏好</label>
+          <div class="chips" id="fExtra">
+            <div class="chip" data-extra="near">离我近一点</div>
+            <div class="chip" data-extra="cheap">越省越好</div>
+            <div class="chip" data-extra="photo">适合出片</div>
+            <div class="chip" data-extra="newbie">新手友好</div>
+          </div>
+        </div>
+
+        <button class="btn ghost" id="resetBtn">↺ 恢复默认偏好</button>
+      </div>
+
+      <div>
+        <div class="panel" style="margin-bottom:16px">
+          <h2>✨ 为你推荐 <span id="recCount" style="font-weight:600;color:var(--muted);font-size:13px"></span></h2>
+          <p class="hint" id="recHint">正在根据天气与预算计算匹配度…</p>
+        </div>
+        <div class="cards" id="recList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 组队 ============ -->
+  <section id="view-team" hidden>
+    <div class="grid two">
+      <div class="panel">
+        <h2>👥 发起一个队伍</h2>
+        <p class="hint">把想法变成一场说走就走的出行，让同伴直接加入。</p>
+        <div class="field">
+          <label>你的昵称</label>
+          <input type="text" id="tName" placeholder="例如：小新" maxlength="12" />
+        </div>
+        <div class="field">
+          <label>活动 / 目的地</label>
+          <input type="text" id="tTitle" placeholder="例如：周六下午桌游 + 咖啡" maxlength="40" />
+        </div>
+        <div class="field">
+          <label>集合时间</label>
+          <input type="text" id="tTime" placeholder="例如：周六 14:00 · 地铁 3 号线 B 口" maxlength="40" />
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>招募人数（含自己）</label>
+            <input type="number" id="tCap" min="2" max="20" value="4" />
+          </div>
+          <div class="field">
+            <label>人均预算（元）</label>
+            <input type="number" id="tBudget" min="0" max="2000" value="80" />
+          </div>
+        </div>
+        <button class="btn" id="tCreate">＋ 创建队伍</button>
+      </div>
+      <div>
+        <div class="panel" style="margin-bottom:16px">
+          <h2>🔥 正在组队</h2>
+          <p class="hint">加入别人的队伍，或自己发起一个。</p>
+        </div>
+        <div class="list" id="teamList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 打卡 ============ -->
+  <section id="view-checkin" hidden>
+    <div class="grid two">
+      <div class="panel">
+        <h2>📍 记录一次打卡</h2>
+        <p class="hint">去过的地方都会被记下来，自动统计次数、时长与花费。</p>
+        <div class="field">
+          <label>去了哪里</label>
+          <input type="text" id="cTitle" placeholder="例如：老城区创意市集" maxlength="40" />
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>日期</label>
+            <input type="date" id="cDate" />
+          </div>
+          <div class="field">
+            <label>花费（人均 / 元）</label>
+            <input type="number" id="cCost" min="0" max="5000" value="0" />
+          </div>
+        </div>
+        <div class="field">
+          <label>时长（小时）</label>
+          <input type="number" id="cHours" min="0.5" max="24" step="0.5" value="2" />
+        </div>
+        <div class="field">
+          <label>心情</label>
+          <div class="chips" id="cMood">
+            <div class="chip on" data-mood="🤩">🤩 超值</div>
+            <div class="chip" data-mood="😌">😌 治愈</div>
+            <div class="chip" data-mood="🥵">🥵 累但爽</div>
+            <div class="chip" data-mood="😐">😐 一般</div>
+            <div class="chip" data-mood="😭">😭 踩雷</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>一句话感想</label>
+          <textarea id="cNote" placeholder="有什么值得告诉后来人的？"></textarea>
+        </div>
+        <button class="btn" id="cAdd">＋ 打卡</button>
+      </div>
+      <div>
+        <div class="panel" style="margin-bottom:16px">
+          <h2>📊 我的探索足迹</h2>
+          <div class="stats" id="cStats"></div>
+          <p class="hint" style="margin:0">数据保存在本地浏览器（localStorage），刷新不丢。</p>
+        </div>
+        <div class="timeline" id="cList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 攻略 ============ -->
+  <section id="view-guide" hidden>
+    <div class="grid two">
+      <div class="panel">
+        <h2>📝 写一篇攻略</h2>
+        <p class="hint">把踩过的坑与私藏路线留给下一位探索者。</p>
+        <div class="field">
+          <label>标题</label>
+          <input type="text" id="gTitle" placeholder="例如：0 元逛完老城区的 5 个点" maxlength="50" />
+        </div>
+        <div class="field">
+          <label>正文</label>
+          <textarea id="gBody" placeholder="路线、时间、避坑点、预算…" style="min-height:130px"></textarea>
+        </div>
+        <div class="field">
+          <label>标签（逗号分隔）</label>
+          <input type="text" id="gTags" placeholder="免费, 拍照, 步行" maxlength="60" />
+        </div>
+        <button class="btn" id="gAdd">🚀 发布攻略</button>
+      </div>
+      <div>
+        <div class="panel" style="margin-bottom:16px">
+          <h2>🌍 大家分享的攻略</h2>
+          <p class="hint">点赞表示“我也想去”。</p>
+        </div>
+        <div class="cards" id="gList"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    周末城市探索指南 · 原型 v1.0 · 数据存本地，活动为示例内容<br />
+    <a href="https://github.com/MoyuOlogy/weekend-city-guide" target="_blank" rel="noopener">GitHub 仓库</a> ·
+    天气数据来自 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>（获取失败自动降级为示例天气）
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   周末城市探索指南 —— 单文件原型
+   模块：数据 / 天气 / 推荐引擎 / 组队 / 打卡 / 攻略
+   ========================================================= */
+const LS = { prefs:'wcg.prefs.v1', teams:'wcg.teams.v1', checkins:'wcg.checkins.v1', guides:'wcg.guides.v1', theme:'wcg.theme.v1' };
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), 1900);
+}
+
+/* ---------------- 1. 城市 & 活动数据 ---------------- */
+const CITIES = {
+  '北京': { lat:39.9042, lon:116.4074 },
+  '上海': { lat:31.2304, lon:121.4737 },
+  '广州': { lat:23.1291, lon:113.2644 },
+  '深圳': { lat:22.5431, lon:114.0579 },
+  '成都': { lat:30.5728, lon:104.0668 },
+  '杭州': { lat:30.2741, lon:120.1551 },
+  '武汉': { lat:30.5928, lon:114.3055 },
+  '西安': { lat:34.3416, lon:108.9398 }
+};
+
+// 活动池：示例数据（真实产品中来自活动平台/POI API）
+const ACTIVITIES = [
+  { id:'a1',  name:'市立美术馆 · 当代艺术特展', type:'展览', price:60,  hours:2.5, dist:4.2, min:1, max:6,  indoor:true,  tags:['出片','冷气','文艺'], desc:'两层展厅 + 露台咖啡，凭学生证半价，周末需提前预约。' },
+  { id:'a2',  name:'老城区周末创意市集',       type:'市集', price:0,   hours:2,   dist:3.1, min:1, max:8,  indoor:false, tags:['免费','小吃','淘货'], desc:'手作摊、独立唱片、二手书，边逛边吃，人多但不挤。' },
+  { id:'a3',  name:'Livehouse 独立乐队现场',   type:'演出', price:120, hours:3,   dist:5.6, min:1, max:6,  indoor:true,  tags:['夜生活','乐队','出片'], desc:'小场地近距离，站票为主，记得带耳塞和现金。' },
+  { id:'a4',  name:'城郊云顶步道短途徒步',     type:'徒步', price:20,  hours:5,   dist:18,  min:2, max:8,  indoor:false, tags:['爬山','体能','出片'], desc:'海拔爬升 400m，山顶视野开阔，建议 9 点前上山。' },
+  { id:'a5',  name:'桌游主题咖啡馆（狼人/德式）',type:'桌游', price:45,  hours:3,   dist:1.8, min:3, max:8,  indoor:true,  tags:['破冰','新手友好','雨天友好'], desc:'店内有主持 DM，人均 45 含一杯饮品，4 人以上最好提前订位。' },
+  { id:'a6',  name:'江畔日落夜骑',             type:'夜骑', price:0,   hours:1.5, dist:2.4, min:1, max:6,  indoor:false, tags:['免费','运动','出片'], desc:'共享单车即可，全程平路 12km，日落前后最美。' },
+  { id:'a7',  name:'陶艺手作体验课',           type:'手作', price:150, hours:2,   dist:3.6, min:1, max:4,  indoor:true,  tags:['手作','纪念品','安静'], desc:'拉坯 + 上釉，作品两周后自取或邮寄，很适合留纪念。' },
+  { id:'a8',  name:'城市公园野餐 + 飞盘局',     type:'露营', price:0,   hours:3,   dist:6.5, min:4, max:12, indoor:false, tags:['免费','团建','晒太阳'], desc:'大草坪 + 树荫，4 人以上就能玩起来，自带垫子和水。' },
+  { id:'a9',  name:'老书店 + 独立咖啡漫游',     type:'咖啡', price:40,  hours:2,   dist:2.2, min:1, max:3,  indoor:true,  tags:['安静','自习','慢生活'], desc:'两家老书店 + 一家手冲，适合一个人放空或两三人聊天。' },
+  { id:'a10', name:'街头摄影 Citywalk 路线',   type:'摄影', price:0,   hours:3,   dist:4.8, min:1, max:6,  indoor:false, tags:['免费','出片','走路'], desc:'老巷 → 骑楼 → 天桥 → 江边，黄金时段 16:30 出发。' },
+  { id:'a11', name:'沉浸式小剧场演出',         type:'演出', price:180, hours:2.5, dist:7.2, min:2, max:4,  indoor:true,  tags:['文艺','约会','出片'], desc:'观众跟随演员移动，建议提前 20 分钟到场存包。' },
+  { id:'a12', name:'露天音乐喷泉夜场',         type:'演出', price:0,   hours:1.5, dist:5.1, min:1, max:10, indoor:false, tags:['免费','夜景','亲子'], desc:'每晚 19:30 一场，提前 15 分钟占前排位置。' },
+  { id:'a13', name:'近郊观星 + 天幕露营',      type:'露营', price:90,  hours:4,   dist:22,  min:2, max:8,  indoor:false, tags:['夜间','星空','近郊'], desc:'需自驾或拼车，带上防潮垫与红光手电筒。' },
+  { id:'a14', name:'复古胶片冲洗工作坊',       type:'手作', price:80,  hours:2,   dist:3.3, min:1, max:4,  indoor:true,  tags:['小众','手作','安静'], desc:'自带一卷未冲洗胶卷，现场学会显影和扫描。' },
+  { id:'a15', name:'VR / 电竞体验馆开黑',      type:'桌游', price:70,  hours:2,   dist:2.9, min:2, max:6,  indoor:true,  tags:['雨天友好','开黑','新手友好'], desc:'按小时计费，4 人联机最划算，周末晚场需排队。' },
+  { id:'a16', name:'早市 + 城市早餐地图',      type:'市集', price:25,  hours:1.5, dist:1.5, min:1, max:4,  indoor:false, tags:['早起','美食','免费'], desc:'8 点前最热闹，一条街吃四样，人均不超过 30。' }
+];
+const TYPES = ['展览','市集','演出','徒步','桌游','咖啡','夜骑','手作','露营','摄影'];
+
+/* ---------------- 2. 天气（Open-Meteo，失败降级） ---------------- */
+const WMO = {
+  0:['晴','☀️',true], 1:['大致晴朗','🌤️',true], 2:['多云','⛅',true], 3:['阴','☁️',true],
+  45:['有雾','🌫️',false], 48:['雾凇','🌫️',false], 51:['小毛毛雨','🌦️',false], 53:['毛毛雨','🌦️',false], 55:['浓毛毛雨','🌧️',false],
+  61:['小雨','🌧️',false], 63:['中雨','🌧️',false], 65:['大雨','⛈️',false], 66:['冻雨','🌧️',false], 67:['强冻雨','🌧️',false],
+  71:['小雪','🌨️',false], 73:['中雪','🌨️',false], 75:['大雪','❄️',false], 77:['米雪','🌨️',false],
+  80:['阵雨','🌦️',false], 81:['强阵雨','🌧️',false], 82:['暴雨','⛈️',false], 85:['阵雪','🌨️',false], 86:['强阵雪','❄️',false],
+  95:['雷阵雨','⛈️',false], 96:['雷阵雨伴冰雹','⛈️',false], 99:['强雷暴','⛈️',false]
+};
+let weather = null; // {days:[{date,code,label,emoji,tmax,tmin,pop}], live:bool}
+const MOCK_W = [
+  { code:2, tmax:22, tmin:14, pop:10 },
+  { code:0, tmax:25, tmin:16, pop:0  },
+  { code:61, tmax:19, tmin:13, pop:75 }
+];
+
+function mockWeather(){
+  const today = new Date();
+  return {
+    live:false,
+    days: MOCK_W.map((m,i)=>{
+      const d = new Date(today.getTime() + i*86400000);
+      const w = WMO[m.code] || WMO[2];
+      return { date:d.toISOString().slice(0,10), code:m.code, label:w[0], emoji:w[1], ok:w[2], tmax:m.tmax, tmin:m.tmin, pop:m.pop };
+    })
+  };
+}
+async function fetchWeather(city){
+  const c = CITIES[city]; if(!c) return mockWeather();
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}`
+    + `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max`
+    + `&timezone=auto&forecast_days=3`;
+  const ctrl = new AbortController(); const timer = setTimeout(()=>ctrl.abort(), 6000);
+  try{
+    const res = await fetch(url, { signal: ctrl.signal });
+    if(!res.ok) throw new Error('http '+res.status);
+    const j = await res.json();
+    const d = j.daily;
+    const days = d.time.map((t,i)=>{
+      const code = d.weather_code[i], w = WMO[code] || WMO[2];
+      return { date:t, code, label:w[0], emoji:w[1], ok:w[2],
+               tmax:Math.round(d.temperature_2m_max[i]), tmin:Math.round(d.temperature_2m_min[i]),
+               pop: d.precipitation_probability_max?.[i] ?? 0 };
+    });
+    return { live:true, days };
+  }catch(e){
+    return mockWeather();
+  }finally{ clearTimeout(timer); }
+}
+
+/* ---------------- 3. 偏好状态 ---------------- */
+const DEFAULT_PREFS = { city:'上海', day:1, budget:150, people:3, hours:4, types:[], extras:[] };
+let prefs = Object.assign({}, DEFAULT_PREFS, load(LS.prefs, {}));
+
+function initPrefsUI(){
+  const citySel = $('#fCity');
+  citySel.innerHTML = Object.keys(CITIES).map(c=>`<option value="${c}">${c}</option>`).join('');
+  citySel.value = CITIES[prefs.city] ? prefs.city : '上海';
+  prefs.city = citySel.value;
+
+  $('#fDay').value = String(prefs.day);
+  $('#fBudget').value = prefs.budget;  $('#budgetVal').textContent = prefs.budget;
+  $('#fPeople').value = prefs.people;  $('#peopleVal').textContent = prefs.people;
+
+  $('#fTypes').innerHTML = TYPES.map(t=>`<div class="chip${prefs.types.includes(t)?' on':''}" data-type="${t}">${t}</div>`).join('');
+  $$('#fHours .chip').forEach(el=>el.classList.toggle('on', Number(el.dataset.hours)===prefs.hours));
+  $$('#fExtra .chip').forEach(el=>el.classList.toggle('on', prefs.extras.includes(el.dataset.extra)));
+}
+function persist(){ save(LS.prefs, prefs); }
+
+/* ---------------- 4. 推荐引擎 ---------------- */
+function scoreActivity(a, w){
+  let s = 30; const reasons = [], warns = [];
+  const outdoorOK = w ? w.ok : true;
+  const rainy = w ? (!w.ok || w.pop >= 50) : false;
+
+  // 类型
+  if(prefs.types.length){
+    if(prefs.types.includes(a.type)){ s += 26; reasons.push(`命中偏好 · ${a.type}`); }
+    else { s -= 18; }
+  }
+  // 天气
+  if(a.indoor){
+    if(rainy){ s += 18; reasons.push('下雨天室内更稳'); }
+  } else {
+    if(rainy){ s -= 32; warns.push(w? `${w.label} ${w.pop}% 降水，户外有风险` : '天气可能不佳'); }
+    else {
+      s += 16;
+      if(w && w.tmax >= 18 && w.tmax <= 28){ s += 6; reasons.push(`天气刚好 · ${w.tmax}°C`); }
+      else reasons.push('天气适合户外');
+    }
+  }
+  // 预算
+  if(a.price <= prefs.budget){
+    s += 18 - Math.min(10, Math.round(a.price / Math.max(1, prefs.budget) * 10));
+    reasons.push(a.price === 0 ? '完全免费' : `¥${a.price} 在预算内`);
+  } else {
+    const over = a.price - prefs.budget;
+    s -= Math.min(30, 12 + over / 5);
+    warns.push(`超预算 ¥${over}`);
+  }
+  // 人数
+  if(prefs.people >= a.min && prefs.people <= a.max){ s += 15; reasons.push(`${prefs.people} 人正合适`); }
+  else if(prefs.people < a.min){ s -= 12; warns.push(`至少 ${a.min} 人`); }
+  else { s -= 8; warns.push(`更适合 ${a.max} 人以内`); }
+  // 时长
+  const lim = prefs.hours === 9 ? 12 : prefs.hours;
+  if(a.hours <= lim){ s += 12; if(lim - a.hours >= 0.5) reasons.push(`约 ${a.hours}h，来得及`); }
+  else { s -= 16; warns.push(`约需 ${a.hours}h，时间偏紧`); }
+  // 距离
+  const near = prefs.extras.includes('near');
+  if(a.dist <= 3){ s += near ? 16 : 8; reasons.push(`离家 ${a.dist}km`); }
+  else if(a.dist >= 15){ s -= near ? 22 : 8; if(near) warns.push(`较远 ${a.dist}km`); }
+  // 额外偏好
+  if(prefs.extras.includes('cheap')){ if(a.price <= 40) { s += 10; reasons.push('花费很低'); } else s -= 8; }
+  if(prefs.extras.includes('photo')){ if(a.tags.includes('出片')) { s += 10; reasons.push('很出片'); } }
+  if(prefs.extras.includes('newbie')){ if(a.tags.includes('新手友好')) { s += 10; reasons.push('新手友好'); } }
+  // 类型多样性微扰，避免每次顺序完全一样
+  s += Math.random() * 4;
+
+  const score = Math.max(6, Math.min(99, Math.round(s)));
+  return { score, reasons: reasons.slice(0,4), warns: warns.slice(0,2) };
+}
+
+function renderRecs(){
+  const w = weather ? weather.days[Math.min(prefs.day, (weather.days.length-1))] : null;
+  const list = ACTIVITIES.map(a => ({ a, ...scoreActivity(a, w) })).sort((x,y)=>y.score - x.score);
+  const top = list.filter(x=>x.score>=45).slice(0,8);
+  const show = top.length ? top : list.slice(0,6);
+  const rain = w ? (!w.ok || w.pop>=50) : false;
+
+  $('#recCount').textContent = `· ${show.length} 个候选`;
+  $('#recHint').innerHTML = w
+    ? `已按 <b>${esc(prefs.city)} ${prefs.day===1?'周六':'周日'}</b> 的天气（${w.emoji} ${esc(w.label)} ${w.tmin}~${w.tmax}°C，降水概率 ${w.pop}%）`
+      + `、人均预算 <b>¥${prefs.budget}</b>、<b>${prefs.people}</b> 人同行、${prefs.hours===9?'一整天':prefs.hours+' 小时'}重排。`
+      + (rain ? ' ☔ 今天优先推荐室内活动。' : ' 🌞 户外活动可以放心安排。')
+    : '正在获取天气…';
+
+  $('#recList').innerHTML = show.map((r,i)=>{
+    const a = r.a;
+    const chips = r.reasons.map(t=>`<b>✓ ${esc(t)}</b>`).join('') + r.warns.map(t=>`<b class="warn">! ${esc(t)}</b>`).join('');
+    const plan = buildPlan(a, w);
+    return `<article class="card fade ${i===0?'best':''}">
+      <div class="top">
+        <div>
+          <h3>${esc(a.name)}</h3>
+          <div class="type">${esc(a.type)} · ${a.indoor?'室内':'户外'} · 步行/骑行 ${a.dist}km 内</div>
+        </div>
+        <div class="score">${r.score}<small>匹配度</small></div>
+      </div>
+      <div class="meta">
+        <span>💰 ${a.price===0?'免费':'¥'+a.price+'/人'}</span>
+        <span>⏱ 约 ${a.hours}h</span>
+        <span>👥 ${a.min}-${a.max} 人</span>
+        <span>🕒 ${esc(plan.time)}</span>
+      </div>
+      <p class="desc">${esc(a.desc)}</p>
+      <div class="reasons">${chips}</div>
+      <div class="tagrow">${a.tags.map(t=>`<span>#${esc(t)}</span>`).join('')}</div>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn mini" data-act="team" data-name="${esc(a.name)}">👥 组队出发</button>
+        <button class="btn mini ghost" data-act="checkin" data-name="${esc(a.name)}">📍 加入打卡</button>
+        <button class="btn mini ghost" data-act="guide" data-name="${esc(a.name)}">📝 写攻略</button>
+      </div>
+    </article>`;
+  }).join('') || `<div class="empty">没有符合的候选，试试放宽预算或时长～</div>`;
+}
+
+function buildPlan(a, w){
+  const start = prefs.day===1 ? '周六' : '周日';
+  let h = 14;
+  if(a.type==='市集' && a.hours<=2) h = 10;
+  if(a.type==='徒步' || a.type==='露营') h = 9;
+  if(a.type==='夜骑') h = 18;
+  if(a.type==='演出') h = 19.5;
+  const fmt = t => `${String(Math.floor(t)).padStart(2,'0')}:${t%1?'30':'00'}`;
+  return { time: `${start} ${fmt(h)}-${fmt(h + a.hours)}` };
+}
+
+/* ---------------- 5. 组队 ---------------- */
+let teams = load(LS.teams, []);
+function renderTeams(){
+  const me = $('#tName').value.trim() || '我';
+  if(!teams.length){
+    $('#teamList').innerHTML = `<div class="empty">还没有队伍。<br />在左边发起一个，或从「探索推荐」里点「组队出发」。</div>`;
+    return;
+  }
+  $('#teamList').innerHTML = teams.map(t=>{
+    const joined = t.members.includes(me);
+    const pct = Math.min(100, Math.round(t.members.length / t.cap * 100));
+    return `<div class="item fade">
+      <div class="head">
+        <div>
+          <h4>${esc(t.title)}</h4>
+          <div class="small">🕒 ${esc(t.time||'时间待定')} · 💰 人均 ¥${t.budget} · 发起人 ${esc(t.owner)}</div>
+        </div>
+        <div class="score">${t.members.length}/${t.cap}<small>已加入</small></div>
+      </div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="avatars">${t.members.map(m=>`<span>${m===t.owner?'👑 ':'🙋 '}${esc(m)}</span>`).join('')}</div>
+      <div class="actions" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn mini ${joined?'ghost':''}" data-act="join" data-id="${t.id}" ${(!joined && t.members.length>=t.cap)?'disabled style="opacity:.5"':''}>
+          ${joined?'✓ 已加入（点击退出）':(t.members.length>=t.cap?'已满员':'＋ 我要加入')}
+        </button>
+        <button class="btn mini ghost" data-act="share" data-id="${t.id}">🔗 复制邀请文案</button>
+        ${t.owner===me?`<button class="btn mini danger" data-act="delteam" data-id="${t.id}">解散</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function createTeam(title){
+  const owner = $('#tName').value.trim();
+  if(!owner) return toast('先填个昵称吧～'), false;
+  if(!title) return toast('写一下要去干嘛～'), false;
+  teams.unshift({ id:uid(), owner, title, time:$('#tTime').value.trim(), cap:Math.max(2, Number($('#tCap').value)||4),
+                  budget:Math.max(0, Number($('#tBudget').value)||0), members:[owner] });
+  save(LS.teams, teams); renderTeams(); return true;
+}
+
+/* ---------------- 6. 打卡 ---------------- */
+let checkins = load(LS.checkins, []);
+const MOODS = { '🤩':'超值', '😌':'治愈', '🥵':'累但爽', '😐':'一般', '😭':'踩雷' };
+let currentMood = '🤩';
+function renderCheckins(){
+  const n = checkins.length;
+  const cost = checkins.reduce((s,c)=>s+(+c.cost||0),0);
+  const hours = checkins.reduce((s,c)=>s+(+c.hours||0),0);
+  $('#cStats').innerHTML = `
+    <div class="stat"><b>${n}</b><span>打卡次数</span></div>
+    <div class="stat"><b>${hours.toFixed(1)}h</b><span>总时长</span></div>
+    <div class="stat"><b>¥${cost}</b><span>总花费</span></div>`;
+  if(!n){ $('#cList').innerHTML = `<div class="empty">还没有打卡记录，去过的每个地方都值得被记下来。</div>`; return; }
+  $('#cList').innerHTML = [...checkins].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(c=>`
+    <div class="tl fade">
+      <div class="head" style="display:flex;justify-content:space-between;gap:10px">
+        <h4>${c.mood} ${esc(c.title)}</h4>
+        <button class="btn mini danger" data-act="delcheckin" data-id="${c.id}">删除</button>
+      </div>
+      <div class="small">${esc(c.date)} · ¥${c.cost}/人 · ${c.hours}h${MOODS[c.mood]?' · '+MOODS[c.mood]:''}</div>
+      ${c.note?`<div class="small" style="color:var(--text)">“${esc(c.note)}”</div>`:''}
+    </div>`).join('');
+}
+function addCheckin(title){
+  if(!title) return toast('填一下去了哪里～'), false;
+  checkins.push({ id:uid(), title, date:$('#cDate').value || new Date().toISOString().slice(0,10),
+                  cost:Number($('#cCost').value)||0, hours:Number($('#cHours').value)||1,
+                  mood:currentMood, note:$('#cNote').value.trim() });
+  save(LS.checkins, checkins); renderCheckins();
+  $('#cTitle').value=''; $('#cNote').value=''; $('#cCost').value=0;
+  return true;
+}
+
+/* ---------------- 7. 攻略 ---------------- */
+let guides = load(LS.guides, []);
+function renderGuides(){
+  if(!guides.length){
+    $('#gList').innerHTML = `<div class="empty">还没有攻略，写出第一篇吧 ✍️</div>`; return;
+  }
+  $('#gList').innerHTML = guides.map(g=>`
+    <article class="card fade">
+      <div class="top">
+        <div>
+          <h3>${esc(g.title)}</h3>
+          <div class="type">by ${esc(g.author)} · ${esc(g.date)}</div>
+        </div>
+        <button class="btn mini ghost" data-act="like" data-id="${g.id}">❤️ ${g.likes}</button>
+      </div>
+      <p class="desc" style="margin-top:10px;white-space:pre-wrap">${esc(g.body)}</p>
+      <div class="tagrow">${g.tags.map(t=>`<span>#${esc(t)}</span>`).join('')}</div>
+    </article>`).join('');
+}
+
+/* ---------------- 8. 事件绑定 ---------------- */
+function switchView(v){
+  $$('#tabs .tab').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+  ['explore','team','checkin','guide'].forEach(k=>$('#view-'+k).hidden = (k!==v));
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+async function refreshWeather(){
+  $('#weatherBox').innerHTML = `<div class="w-main"><span class="loading"></span> 正在获取 ${esc(prefs.city)} 的天气…</div>`;
+  weather = await fetchWeather(prefs.city);
+  const w = weather.days[Math.min(prefs.day, weather.days.length-1)];
+  const rain = !w.ok || w.pop>=50;
+  const tip = rain ? '☔ 有降水，优先室内活动（展览 / 桌游 / 手作 / 演出）'
+                   : (w.tmax>=30 ? '🥵 偏热，尽量避开正午，多补水' : (w.tmax<=8 ? '🧣 偏冷，穿厚一点再出门' : '🌞 天气不错，户外放心冲'));
+  $('#weatherBox').innerHTML = `
+    <div class="w-main">
+      <div class="w-emoji">${w.emoji}</div>
+      <div>
+        <div class="w-temp">${w.tmax}° <span style="font-size:14px;color:var(--muted)">/ ${w.tmin}°</span></div>
+        <div class="w-meta">${esc(prefs.city)} · ${prefs.day===1?'周六':'周日'} ${esc(w.date)} · ${esc(w.label)} · 降水概率 ${w.pop}%</div>
+      </div>
+    </div>
+    <div class="w-side">
+      <div class="w-tip">${tip}</div>
+      <div class="w-tip">${weather.live?'🛰️ 实时天气（Open-Meteo）':'⚠️ 网络不可用，已降级为示例天气'}</div>
+    </div>`;
+}
+function refreshAll(){ persist(); refreshWeather().then(renderRecs); }
+
+document.addEventListener('click', e=>{
+  const tab = e.target.closest('#tabs .tab');
+  if(tab) return switchView(tab.dataset.view);
+
+  const chip = e.target.closest('.chip');
+  if(chip){
+    const box = chip.parentElement;
+    if(box.id==='fTypes'){
+      if(chip.classList.contains('on')) prefs.types = prefs.types.filter(t=>t!==chip.dataset.type);
+      else prefs.types.push(chip.dataset.type);
+      chip.classList.toggle('on'); refreshAll();
+    } else if(box.id==='fExtra'){
+      const k = chip.dataset.extra;
+      if(chip.classList.contains('on')) prefs.extras = prefs.extras.filter(x=>x!==k);
+      else prefs.extras.push(k);
+      chip.classList.toggle('on'); refreshAll();
+    } else if(box.id==='fHours'){
+      prefs.hours = Number(chip.dataset.hours);
+      $$('#fHours .chip').forEach(c=>c.classList.toggle('on', c===chip)); refreshAll();
+    } else if(box.id==='cMood'){
+      currentMood = chip.dataset.mood;
+      $$('#cMood .chip').forEach(c=>c.classList.toggle('on', c===chip));
+    }
+    return;
+  }
+
+  const btn = e.target.closest('[data-act]');
+  if(!btn) return;
+  const act = btn.dataset.act;
+
+  if(act==='team'){ switchView('team'); $('#tTitle').value = btn.dataset.name; $('#tTitle').focus(); }
+  if(act==='checkin'){ switchView('checkin'); $('#cTitle').value = btn.dataset.name; $('#cTitle').focus(); }
+  if(act==='guide'){ switchView('guide'); $('#gTitle').value = btn.dataset.name; $('#gBody').focus(); }
+
+  if(act==='join'){
+    const me = $('#tName').value.trim();
+    if(!me) return toast('先在左边填个昵称，同伴才知道是谁～');
+    const t = teams.find(x=>x.id===btn.dataset.id); if(!t) return;
+    if(t.members.includes(me)) t.members = t.members.filter(m=>m!==me);
+    else { if(t.members.length>=t.cap) return toast('队伍已经满员啦'); t.members.push(me); toast('已加入「'+t.title+'」🎉'); }
+    save(LS.teams, teams); renderTeams();
+  }
+  if(act==='share'){
+    const t = teams.find(x=>x.id===btn.dataset.id); if(!t) return;
+    const txt = `【周末组队】${t.title}\n时间：${t.time||'待定'}\n人均：¥${t.budget}\n已加入：${t.members.join('、')}（${t.members.length}/${t.cap}）\n还差 ${Math.max(0,t.cap-t.members.length)} 人，一起来！`;
+    navigator.clipboard?.writeText(txt).then(()=>toast('邀请文案已复制 ✅'), ()=>toast('复制失败，可手动长按选择'));
+  }
+  if(act==='delteam'){ teams = teams.filter(x=>x.id!==btn.dataset.id); save(LS.teams, teams); renderTeams(); toast('队伍已解散'); }
+  if(act==='delcheckin'){ checkins = checkins.filter(x=>x.id!==btn.dataset.id); save(LS.checkins, checkins); renderCheckins(); toast('已删除'); }
+  if(act==='like'){
+    const g = guides.find(x=>x.id===btn.dataset.id); if(!g) return;
+    g.likes++; save(LS.guides, guides); renderGuides();
+  }
+});
+
+$('#tCreate').addEventListener('click', ()=>{ if(createTeam($('#tTitle').value.trim())) { toast('队伍创建成功，快分享给同伴 🚀'); $('#tTitle').value=''; } });
+$('#cAdd').addEventListener('click', ()=>{ if(addCheckin($('#cTitle').value.trim())) toast('打卡成功，足迹 +1 📍'); });
+$('#gAdd').addEventListener('click', ()=>{
+  const title = $('#gTitle').value.trim(), body = $('#gBody').value.trim();
+  if(!title || !body) return toast('标题和正文都写一点吧～');
+  const author = $('#tName').value.trim() || '匿名探索者';
+  guides.unshift({ id:uid(), title, body, author, date:new Date().toISOString().slice(0,10), likes:0,
+                   tags: $('#gTags').value.split(/[,，]/).map(s=>s.trim()).filter(Boolean) });
+  save(LS.guides, guides); renderGuides(); $('#gTitle').value=''; $('#gBody').value=''; $('#gTags').value='';
+  toast('攻略已发布 🚀');
+});
+$('#resetBtn').addEventListener('click', ()=>{
+  prefs = Object.assign({}, DEFAULT_PREFS); initPrefsUI(); refreshAll(); toast('已恢复默认偏好');
+});
+$('#themeBtn').addEventListener('click', ()=>{
+  const cur = document.documentElement.dataset.theme==='light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = cur; save(LS.theme, cur);
+});
+
+['#fCity','#fDay'].forEach(sel=>$(sel).addEventListener('change', e=>{
+  if(sel==='#fCity') prefs.city = e.target.value; else prefs.day = Number(e.target.value);
+  refreshAll();
+}));
+$('#fBudget').addEventListener('input', e=>{ prefs.budget = Number(e.target.value); $('#budgetVal').textContent = prefs.budget; refreshAll(); });
+$('#fPeople').addEventListener('input', e=>{ prefs.people = Number(e.target.value); $('#peopleVal').textContent = prefs.people; refreshAll(); });
+$('#tName').addEventListener('input', renderTeams);
+
+/* ---------------- 9. 启动 ---------------- */
+(function init(){
+  document.documentElement.dataset.theme = load(LS.theme, 'dark');
+  $('#cDate').value = new Date().toISOString().slice(0,10);
+  initPrefsUI();
+  renderTeams(); renderCheckins(); renderGuides();
+  refreshWeather().then(renderRecs);
+})();
+</script>
+</body>
+</html>
