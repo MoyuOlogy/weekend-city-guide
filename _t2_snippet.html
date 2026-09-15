@@ -1,0 +1,193 @@
+<pre id="TESTOUT" style="display:none"></pre>
+<script>
+(async function(){
+  const R = [];
+  const ok = (n, c) => R.push((c ? 'PASS' : 'FAIL') + ' :: ' + n);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const tap = el => el.dispatchEvent(new PointerEvent('pointerup', { bubbles:true }));
+  try{
+    await sleep(2500);                       // 等 init + 天气返回
+
+    /* ---------- A. 结构渲染 ---------- */
+    ok('分类条渲染 11 项（推荐+10类）', document.querySelectorAll('#catbar .cat').length === 11);
+    ok('底部 Tab 有 5 个（含发布）', document.querySelectorAll('.tabbar .tb').length === 5);
+    ok('信息流渲染出卡片', document.querySelectorAll('#feed .note').length > 0);
+    ok('瀑布流为多列', document.querySelectorAll('#feed .mcol').length >= 2);
+    ok('卡片含封面/标题/点赞', !!document.querySelector('#feed .note .cover') &&
+        !!document.querySelector('#feed .note .note-title') &&
+        !!document.querySelector('#feed .note .like'));
+    const scores = Array.from(document.querySelectorAll('#feed .note .match')).map(e => parseInt(e.textContent));
+    ok('匹配度最高的排在第一列第一位', scores.length > 0 && scores[0] === Math.max(...scores));
+    ok('天气条渲染出城市', /上海/.test(document.querySelector('#weatherBar').textContent));
+
+    /* ---------- B. 筛选 / 搜索 ---------- */
+    document.querySelectorAll('#catbar .cat')[4].click();     // 第 5 项 = 徒步
+    const catNow = document.querySelector('#catbar .cat.on').dataset.cat;
+    const feedCount = document.querySelectorAll('#feed .note-title').length;
+    ok('点击分类后筛选生效', feedCount > 0 && catNow !== '全部');
+    document.querySelectorAll('#catbar .cat')[0].click();     // 回到推荐
+
+    const q = document.querySelector('#q');
+    q.value = '桌游'; q.dispatchEvent(new Event('input', { bubbles:true }));
+    const hitTitles = Array.from(document.querySelectorAll('#feed .note-title')).map(e => e.textContent);
+    ok('搜索能命中活动', hitTitles.length > 0 && hitTitles.length <= 24);
+    q.value = '不存在的东西xyz'; q.dispatchEvent(new Event('input', { bubbles:true }));
+    ok('无结果时显示空状态', !!document.querySelector('#feed .empty'));
+    q.value = ''; q.dispatchEvent(new Event('input', { bubbles:true }));
+
+    /* ---------- C. 筛选面板 ---------- */
+    document.querySelector('#filterBtn').click();
+    ok('筛选面板打开', document.querySelector('#sheetForm').classList.contains('on'));
+    ok('筛选面板含城市/预算/人数/时长', !!document.querySelector('#fCity') && !!document.querySelector('#fBudget') &&
+        !!document.querySelector('#fPeople') && !!document.querySelector('#fHours'));
+    const b = document.querySelector('#fBudget'); b.value = '0'; b.dispatchEvent(new Event('input', { bubbles:true }));
+    ok('预算改变写入偏好', prefs.budget === 0 && localStorage.getItem('wcg.prefs.v2').includes('"budget":0'));
+    b.value = '150'; b.dispatchEvent(new Event('input', { bubbles:true }));
+    document.querySelector('#sheetForm [data-act="close"]').click();
+    ok('关闭弹层', !document.querySelector('#sheetForm').classList.contains('on'));
+
+    /* ---------- D. 点赞 ---------- */
+    const card = document.querySelector('#feed .note');
+    const actId = card.dataset.id;
+    const c0 = likeCount(actId);
+    card.querySelector('.like').click();
+    ok('点赞计数 +1', likeCount(actId) === c0 + 1);
+    ok('点赞按钮进入选中态', document.querySelector('#feed .note .like').classList.contains('on'));
+    ok('点赞写入 localStorage', localStorage.getItem('wcg.store.v2').includes('"likes"'));
+    document.querySelector('#feed .note .like').click();
+    ok('再次点击取消赞', likeCount(actId) === c0);
+
+    /* 双击封面点赞 */
+    const wrap2 = document.querySelector('#feed .note .cover-wrap');
+    const id2 = wrap2.dataset.id;
+    const c2 = likeCount(id2);
+    tap(wrap2); tap(wrap2);
+    await sleep(150);
+    ok('双击封面点赞生效', likeCount(id2) === c2 + 1);
+
+    /* 单击封面打开详情 */
+    const wrap3 = document.querySelector('#feed .note .cover-wrap');
+    tap(wrap3);
+    await sleep(430);
+    ok('单击封面打开详情弹层', document.querySelector('#sheetDetail').classList.contains('on'));
+    ok('详情含匹配度与组队按钮', /匹配/.test(document.querySelector('#sheetDetail').textContent) &&
+        !!document.querySelector('#sheetDetail [data-act="quickteam"]'));
+    document.querySelector('#sheetDetail [data-act="close"]')?.click();
+
+    /* ---------- E. 发布流程 ---------- */
+    document.querySelector('#plusBtn').click();
+    ok('＋ 打开发布选择面板', document.querySelector('#sheetForm').classList.contains('on') &&
+        document.querySelectorAll('.pubgrid button').length === 4);
+    me.nick = '测试员'; persistMe();
+
+    document.querySelector('[data-act="pub"][data-kind="team"]').click();
+    document.querySelector('#tTitle').value = '周六桌游局';
+    document.querySelector('#tTime').value = '周六 14:00 地铁 B 口';
+    document.querySelector('#tCap').value = '3';
+    document.querySelector('#tCreate').click();
+    ok('发布组队写入数据', store.teams.length === 1 && store.teams[0].members.includes('测试员'));
+    ok('组队页渲染出卡片', /周六桌游局/.test(document.querySelector('#teamList').textContent));
+
+    document.querySelector('#plusBtn').click();
+    document.querySelector('[data-act="pub"][data-kind="checkin"]').click();
+    document.querySelector('#cTitle').value = '老城区市集';
+    document.querySelector('#cCost').value = '35';
+    document.querySelector('#cHours').value = '2.5';
+    document.querySelector('#cAdd').click();
+    ok('打卡写入数据', store.checkins.length === 1);
+    ok('打卡统计正确', /¥35/.test(document.querySelector('#ckStats').textContent) && /2\.5/.test(document.querySelector('#ckStats').textContent));
+
+    document.querySelector('#plusBtn').click();
+    document.querySelector('[data-act="pub"][data-kind="guide"]').click();
+    document.querySelector('#gTitle').value = '0 元逛老城区';
+    document.querySelector('#gBody').value = '上午市集，下午书店。';
+    document.querySelector('#gTags').value = '免费, 步行';
+    document.querySelector('#gAdd').click();
+    ok('攻略写入数据且标签解析正确', store.guides.length === 1 && store.guides[0].tags.length === 2);
+    document.querySelector('#guideList [data-act="likeg"]').click();
+    ok('攻略点赞 +1', store.guides[0].likedBy.length === 1);
+
+    document.querySelector('#plusBtn').click();
+    document.querySelector('[data-act="pub"][data-kind="activity"]').click();
+    document.querySelector('#nName').value = '大学城天台看日落';
+    document.querySelector('#nType').value = '摄影';
+    document.querySelector('#nAdd').click();
+    ok('自建活动进入活动库', store.activities.length === 1 && store.activities[0].name === '大学城天台看日落');
+    document.querySelectorAll('#catbar .cat')[0].click();
+    ok('自建活动出现在信息流', /大学城天台看日落/.test(document.querySelector('#feed').textContent));
+
+    /* ---------- F. 跨设备合并逻辑 ---------- */
+    const before = store.teams.length;
+    sync.receive({ v:2, room:'TESTRM', nick:'同学B', ts:Date.now(),
+      teams:[{ id:'remote1', owner:'同学B', title:'别人的剧本杀局', time:'周日 15:00', cap:6, budget:60, members:['同学B'], ts:Date.now() }],
+      checkins:[], guides:[], activities:[], likes:{}, tomb:[] }, Date.now());
+    ok('收到别人发的队伍并合并', store.teams.length === before + 1 && /别人的剧本杀局/.test(document.querySelector('#teamList').textContent));
+    ok('记录在线同伴', sync.online().includes('同学B'));
+
+    const mineId = store.teams.find(t => t.owner === '测试员').id;
+    sync.receive({ v:2, room:'TESTRM', nick:'同学B', ts:Date.now(), teams:[{ id:mineId,
+      owner:'测试员', title:'周六桌游局', cap:3, budget:80, members:['测试员','同学B'], ts:Date.now()+9999 }],
+      checkins:[], guides:[], activities:[], likes:{}, tomb:[] }, Date.now());
+    const myTeam = store.teams.find(t => t.owner === '测试员');
+    ok('ts 较新的远端成员列表胜出', myTeam.members.includes('同学B'));
+
+    const victim = store.checkins[0].id;
+    store.tomb.push(victim);
+    store.checkins = store.checkins.filter(c => c.id !== victim);
+    sync.receive({ v:2, room:'TESTRM', nick:'同学B', ts:Date.now(),
+      teams:[], checkins:[{ id:victim, title:'老城区市集', date:'2026-09-19', cost:35, hours:2.5, owner:'测试员', ts:1 }],
+      guides:[], activities:[], likes:{}, tomb:[] }, Date.now());
+    ok('已删除的打卡不会因旧快照复活（墓碑）', !store.checkins.some(c => c.id === victim));
+
+    const sk = 'a5';
+    store.likes[sk] = { '测试员': 1000 };
+    sync.receive({ v:2, room:'TESTRM', nick:'测试员', ts:Date.now(), teams:[], checkins:[], guides:[], activities:[],
+      likes:{ [sk]:{ '测试员': -2000 } }, tomb:[] }, Date.now());
+    ok('同一人较新的“取消赞”覆盖旧的“赞”', iLiked(sk) === false && likeCount(sk) === 0);
+    store.likes[sk] = { '甲': 1, '乙': 2 };
+    sync.receive({ v:2, room:'TESTRM', nick:'丙', ts:Date.now(), teams:[], checkins:[], guides:[], activities:[],
+      likes:{ [sk]:{ '甲': 1, '丙': 3 } }, tomb:[] }, Date.now());
+    ok('多人点赞取并集', likeCount(sk) === 3);
+
+    me.room = 'TESTRM';
+    sync.receive({ v:2, room:'OTHER', nick:'路人', ts:Date.now(), teams:[{ id:'x', owner:'路人', title:'不该出现', cap:2, budget:0, members:[], ts:1 }],
+      checkins:[], guides:[], activities:[], likes:{}, tomb:[] }, Date.now());
+    ok('房间内收到别的房号快照会被丢弃', !store.teams.some(t => t.id === 'x'));
+    sync.receive({ v:2, room:'TESTRM', nick:'同学C', ts:Date.now(), teams:[{ id:'y', owner:'同学C', title:'同房间的局', cap:2, budget:0, members:[], ts:Date.now() }],
+      checkins:[], guides:[], activities:[], likes:{}, tomb:[] }, Date.now());
+    ok('同房间的快照正常合并', store.teams.some(t => t.id === 'y'));
+    me.room = ''; persistMe();
+    sync.receive({ v:2, room:'', nick:'分享者', ts:Date.now(), teams:[{ id:'z', owner:'分享者', title:'分享链接带来的局', cap:2, budget:0, members:[], ts:Date.now() }],
+      checkins:[], guides:[], activities:[], likes:{}, tomb:[] }, Date.now());
+    ok('未加入房间时仍能导入分享链接数据', store.teams.some(t => t.id === 'z'));
+
+    /* ---------- G. 分享链接往返 ---------- */
+    const dec = decodeState(encodeState());
+    ok('分享链接可解码且数据一致', JSON.stringify(dec.teams) === JSON.stringify(sync.snapshot().teams) &&
+        JSON.stringify(dec.guides) === JSON.stringify(sync.snapshot().guides));
+    ok('房间码为 6 位且无易混字符', /^[A-HJ-NP-Z2-9]{6}$/.test(genCode()));
+    ok('房间码随机不重复', genCode() !== genCode());
+
+    /* ---------- H. 安全与持久化 ---------- */
+    store.guides.unshift({ id:'xss', title:'<img src=x onerror=alert(1)>', body:'正文', author:'坏人', date:'2026-01-01', likedBy:[], tags:[], ts:Date.now() });
+    persistStore(); renderGuides();
+    const gh = document.querySelector('#guideList').innerHTML;
+    ok('恶意标题被转义', gh.includes('&lt;img') && !gh.includes('<img src=x'));
+    ok('数据持久化到 localStorage', !!localStorage.getItem('wcg.store.v2') && !!localStorage.getItem('wcg.prefs.v2'));
+    document.querySelector('#themeBtn').click();
+    const th = document.documentElement.dataset.theme;
+    ok('主题切换并落盘', (th === 'dark' || th === 'light') && localStorage.getItem('wcg.theme.v2') === JSON.stringify(th));
+
+    /* ---------- I. 页面切换 ---------- */
+    document.querySelectorAll('.tb')[1].click();
+    ok('切换到组队页', document.querySelector('#page-team').hidden === false && document.querySelector('#page-feed').hidden === true);
+    document.querySelectorAll('.tb')[4].click();
+    ok('切换到我的页并渲染统计', document.querySelector('#page-me').hidden === false && document.querySelectorAll('#meStats .stat').length === 4);
+  }catch(e){
+    R.push('FAIL :: 运行异常 ' + (e && e.message));
+  }
+  const fails = R.filter(r => r.startsWith('FAIL'));
+  document.querySelector('#TESTOUT').textContent = 'TESTS ' + (R.length - fails.length) + '/' + R.length + ' PASSED\n' + R.join('\n');
+  document.title = fails.length ? ('TESTS FAILED: ' + fails.length) : 'TESTS OK';
+})();
+</script>

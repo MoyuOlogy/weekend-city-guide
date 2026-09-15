@@ -1,0 +1,86 @@
+<pre id="TESTOUT" style="display:none"></pre>
+<script>
+(async function(){
+  const R = [];
+  const ok = (n, c) => R.push((c ? 'PASS' : 'FAIL') + ' :: ' + n);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  try{
+    await sleep(2200);
+    me.nick = '设备A'; persistMe();
+
+    /* ---- 1. 建房（真实网络：textdb.dev） ---- */
+    const code = genCode();
+    await sync.join(code);
+    ok('创建房间后拿到房间码', me.room === code && /^[A-Z0-9]{6}$/.test(code));
+    ok('存储 key 生成正确', topicOf(code) === 'wcg-' + code.toUpperCase());
+    ok('建房即发布成功（status=live）', sync.status === 'live');
+
+    /* ---- 2. 设备A 发布一条队伍 ---- */
+    store.teams.unshift({ id:'跨设备测试队', owner:'设备A', title:'周末去爬山', time:'周六 09:00 北门', cap:5, budget:30, members:['设备A'], ts:Date.now() });
+    persistStore();
+    await sync.publish(true);
+    await sleep(600);
+    ok('队伍发布后状态正常', sync.status === 'live');
+
+    /* ---- 2b. 原始请求诊断：带/不带 query 的读取差异 ---- */
+    const rawBase = `https://textdb.dev/api/data/${topicOf(code)}`;
+    const q1 = await fetch(rawBase, { headers:{ 'Accept':'application/json' } });
+    const qt1 = await q1.text();
+    const q2 = await fetch(rawBase + '?_=' + Date.now(), { headers:{ 'Accept':'application/json' } });
+    const qt2 = await q2.text();
+    R.push(`DIAG 不带query: ${q1.status} len=${qt1.length}`);
+    R.push(`DIAG 全文: ${qt1}`);
+    const fr = await sync.fetchRemote();
+    R.push(`DIAG fetchRemote.teams=${JSON.stringify((fr?.teams || []).map(t => t.title))} room=${fr?.room} meRoom=${me.room}`);
+    R.push(`DIAG 本地 teams=${JSON.stringify(store.teams.map(t => t.title))} tomb=${JSON.stringify(store.tomb)}`);
+
+    /* ---- 3. 模拟设备B：清空本地后 pull，看能不能拿到 ---- */
+    store.teams = []; store.guides = []; store.checkins = []; persistStore();
+    ok('清空本地后确实没有队伍', store.teams.length === 0);
+    await sync.pull();
+    ok('★ 从云端拉回了设备A发布的队伍（跨设备可见）', store.teams.some(t => t.title === '周末去爬山' && t.owner === '设备A'));
+
+    /* ---- 4. 中文 + 长文本也能跨设备 ---- */
+    store.guides = [{ id:'跨设备攻略', title:'爬山攻略·日出最佳机位', body:'带够水，9 点前上山。'.repeat(30), author:'设备A', date:ymd(new Date()), likedBy:[], tags:['徒步','出片'], ts:Date.now() }];
+    persistStore();
+    await sync.publish(true);
+    await sleep(600);
+    store.guides = []; persistStore();
+    await sync.pull();
+    ok('★ 中文长文本攻略跨设备完好', store.guides.some(g => g.title === '爬山攻略·日出最佳机位' && g.body.includes('带够水')));
+
+    /* ---- 5. 点赞状态跨设备合并 ---- */
+    store.likes = { a1:{ '设备A': 1000 } };
+    await sync.publish(true);
+    await sleep(600);
+    sync.receive({ v:2, room:me.room, nick:'设备B', ts:Date.now(), teams:[], checkins:[], guides:[], activities:[],
+      likes:{ a1:{ '设备B': 2000 } }, tomb:[] });
+    ok('点赞按人合并，两人都算上', likeCount('a1') === 2);
+
+    /* ---- 6. 房间为空时 pull 不报错 ---- */
+    const saved = me.room; me.room = genCode();
+    await sync.pull();
+    ok('空房间 pull 不报错（返回空即视为空房间）', sync.status !== 'err');
+    me.room = saved;
+
+    /* ---- 7. 失败降级与恢复 ---- */
+    const savedFetch = window.fetch;
+    window.fetch = () => Promise.reject(new Error('offline'));
+    await sync.publish(true);
+    ok('发布失败时降级为 err 而不是抛异常', sync.status === 'err');
+    window.fetch = savedFetch;
+    await sync.publish(true);
+    ok('恢复网络后重新同步成功', sync.status === 'live');
+
+    /* ---- 8. 轮询生命周期 ---- */
+    ok('轮询定时器已启动', sync.poll !== null);
+    sync.leave();
+    ok('离开房间后停止轮询并复位', me.room === '' && sync.poll === null && sync.status === 'off');
+  }catch(e){
+    R.push('FAIL :: 运行异常 ' + (e && e.message));
+  }
+  const fails = R.filter(r => r.startsWith('FAIL'));
+  document.querySelector('#TESTOUT').textContent = 'TESTS ' + (R.length - fails.length) + '/' + R.length + ' PASSED\n' + R.join('\n');
+  document.title = fails.length ? ('TESTS FAILED: ' + fails.length) : 'TESTS OK';
+})();
+</script>

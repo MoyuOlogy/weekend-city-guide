@@ -1,0 +1,51 @@
+<pre id="TESTOUT"></pre>
+<script>
+(async function(){
+  const rep = [];
+  const log = s => rep.push(String(s));
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const send = async () => {
+    try { await fetch('http://127.0.0.1:18080/result', { method:'POST', body: rep.join('\n'), headers:{ 'Content-Type':'text/plain' } }); }
+    catch(e){ try{ navigator.sendBeacon('http://127.0.0.1:18080/result', rep.join('\n')); }catch(_){} }
+  };
+  try{
+    const topic = 'wcg-diag-' + Math.random().toString(36).slice(2, 8);
+    log('topic=' + topic);
+
+    // A. 小消息发布
+    let t0 = performance.now();
+    const r1 = await fetch(`https://ntfy.sh/${topic}`, { method:'POST', body: JSON.stringify({ hello:'world', n:1 }), headers:{ 'Content-Type':'text/plain' } });
+    log(`A POST small: status=${r1.status} body=${(await r1.text()).slice(0,120)} ${Math.round(performance.now()-t0)}ms`);
+
+    await sleep(1500);
+    let r2 = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=all`);
+    let t2 = await r2.text();
+    log(`B GET poll: status=${r2.status} bytes=${t2.length}`);
+    log('B RAW: ' + t2.slice(0, 400));
+
+    // C. 大消息（6000 字符 ASCII）
+    const big = JSON.stringify({ data:'x'.repeat(5900) });
+    const r3 = await fetch(`https://ntfy.sh/${topic}`, { method:'POST', body: big, headers:{ 'Content-Type':'text/plain' } });
+    log(`C POST big chars=${big.length}: status=${r3.status} body=${(await r3.text()).slice(0,200)}`);
+
+    // D. 中文负载：字符数 vs UTF-8 字节数
+    const cn = JSON.stringify({ t:'周末去爬山'.repeat(180) });
+    log(`D CN chars=${cn.length} bytes=${new TextEncoder().encode(cn).length}`);
+    const r4 = await fetch(`https://ntfy.sh/${topic}`, { method:'POST', body: cn, headers:{ 'Content-Type':'text/plain' } });
+    log(`D POST cn: status=${r4.status} body=${(await r4.text()).slice(0,200)}`);
+
+    await sleep(1500);
+    const r5 = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=all`);
+    const t5 = await r5.text();
+    log(`E GET poll2: status=${r5.status} bytes=${t5.length} cnPresent=${t5.includes('周末去爬山')}`);
+    log('E line count=' + t5.split('\n').filter(Boolean).length);
+
+    // F. 应用自身的 pull 路径
+    log('F sync.status before=' + sync.status);
+  }catch(e){
+    log('EXCEPTION: ' + (e && e.message));
+  }
+  document.querySelector('#TESTOUT').textContent = rep.join('\n');
+  await send();
+})();
+</script>
