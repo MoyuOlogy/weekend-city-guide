@@ -69,7 +69,7 @@ function renderCalendar(){
       text:`${md(w.date)} ${label} ${w.tmin}~${w.tmax}° · ${shift ? '调休上班' : (wet ? '建议室内' : '适合出门')}` });
   });
   $('#calAlerts').innerHTML = alerts.map(a =>
-    `<div class="cal-alert ${a.cls}"${a.title ? ` title="${esc(a.title)}"` : ''}>`
+    `<div class="cal-alert ${a.cls}"${a.title ? ` title="${esc(a.title)}" data-tip="${esc(a.title)}"` : ''}>`
     + `<svg class="ri" width="14" height="14"><use href="#${a.icon}"></use></svg><span>${esc(a.text)}</span></div>`).join('');
 
   // 假期清单：7 张卡片改成两列紧凑列表，一屏放得下

@@ -91,7 +91,8 @@ function renderWeatherBar(){
     if(!w) return '';
     const shift = isWorkShift(w.date), hol = holidayOf(w.date);
     const tip = `${w.label} · 降水概率 ${w.pop}%` + (shift ? ' · 这天调休上班' : '');
-    return `<span class="wchip wday${shift ? ' shift' : ''}" title="${esc(tip)}">
+    // title 给桌面悬停，data-tip 给触屏点按 —— 手机上没有悬停，只有 title 等于没这个信息
+    return `<span class="wchip wday${shift ? ' shift' : ''}" title="${esc(tip)}" data-tip="${esc(tip)}">
       <span class="we">${w.emoji}</span>
       <span>${hol ? hol.name : label}</span>
       <span class="wd">${md(w.date)}</span>
@@ -111,7 +112,7 @@ function renderWeatherBar(){
   const shiftSoon = WORK_SHIFT.filter(w => { const dd = dayDiff(today, w); return dd >= 0 && dd <= 7; });
   const wetWeekend = isWet(sat) || isWet(sun);
   bar.innerHTML = `
-    <span class="wchip city" title="天气按这个城市取"><svg class="ri" width="14" height="14"><use href="#i-pin"></use></svg>${esc(prefs.city)}</span>
+    <span class="wchip city" title="天气按这个城市取" data-tip="天气按这个城市取，可在「筛选」里改"><svg class="ri" width="14" height="14"><use href="#i-pin"></use></svg>${esc(prefs.city)}</span>
     ${dayChip(sat, '周六')}${dayChip(sun, '周日')}
     <span class="wchip meta">距周末 <b>${weekTxt}</b> · ${holTxt}</span>
     <span class="wchip meta">${wetWeekend ? '☔ 优先室内' : '☀️ 适合户外'}</span>

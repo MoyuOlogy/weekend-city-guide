@@ -50,6 +50,8 @@ CASES = [
     ('desktop-me', 1440, 900, 'me', SEED_GUIDED),
     ('mobile-feed', 390, 844, 'feed', SEED_GUIDED),
     ('mobile-calendar', 390, 900, 'calendar', SEED_GUIDED),
+    # 小屏手机（iPhone SE 那一档 375×667）：假期页也要一屏看完，单列出来留证
+    ('mobile-calendar-small', 375, 667, 'calendar', SEED_GUIDED),
     ('mobile-me', 390, 844, 'me', SEED_GUIDED),
     ('mobile-tour', 390, 844, 'feed', CLEAR_GUIDED),        # 第一次访问：引导遮罩
     ('desktop-tour', 1440, 900, 'feed', SEED_GUIDED + SPOTLIGHT),   # 高亮态（第 2 步：天气条）

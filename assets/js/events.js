@@ -25,6 +25,11 @@ document.addEventListener('click', async e => {
     return openNote(noteLink.dataset.note);
   }
 
+  // 只在悬停提示里的长尾信息（天气描述 / 降水概率 / 假期起止）：触屏没有悬停，
+  // 点一下直接把提示内容弹出来，否则手机上这些信息等于不存在。
+  const tipEl = t.closest('[data-tip]');
+  if(tipEl && tipEl.dataset.tip){ toast(tipEl.dataset.tip); return; }
+
   // 导航：移动端底部 Tab / 桌面端左侧栏 / 顶栏「＋」（＋ 必须先判断，否则会被通用规则吃掉）
   if(t.closest('#plusBtn') || t.closest('#railPublish') || t.closest('#postMini')){ buzz(); return openPublish(null); }
   const nav = t.closest('[data-page]');

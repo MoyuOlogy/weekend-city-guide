@@ -420,6 +420,12 @@
     ok('日历高亮今天（仅一个）', document.querySelectorAll('#calGrid .cal-day.today').length === 1);
     ok('★ 有出行提醒（假期倒计时/调休/周末天气）', document.querySelectorAll('#calAlerts .cal-alert').length >= 2);
     // v2.8：提醒从「整行大色块」压成一行内联小胶囊
+    ok('★ 假期提醒胶囊带 data-tip，点一下会弹出完整说明（触屏可达）', (() => {
+      const tips = [...document.querySelectorAll('#calAlerts .cal-alert[data-tip]')];
+      if(tips.length < 2) return false;
+      realClick(tips[0]);
+      return document.querySelector('#toast').textContent === tips[0].dataset.tip;
+    })());
     ok('★ 提醒改成一行内联胶囊（不是一叠大色块）', (() => {
       const box = document.querySelector('#calAlerts');
       const items = [...box.querySelectorAll('.cal-alert')];
@@ -518,6 +524,16 @@
     })());
     ok('★ 天气条的城市用图标标出（不是光秃秃三个字）', !!wb.querySelector('.wchip.city .ri'));
     // v2.8：高度预算按实测值定（宽屏 1280/1440 = 40px 单行；731/900 = 74px 两行；375 = 131px 四行）
+    // v3.0：天气描述 / 降水概率这些长尾信息原来只写在 title 里 —— 触屏没有悬停，
+    // 手机上等于看不到。现在同时写 data-tip，点一下弹出来。
+    ok('★ 天气胶囊带 data-tip（触屏也能看到长尾信息）',
+       document.querySelectorAll('#weatherBar .wchip[data-tip]').length >= 3);
+    const chipTip = document.querySelector('#weatherBar .wchip[data-tip]');
+    const chipTipText = chipTip.dataset.tip;
+    realClick(chipTip); await sleep(150);
+    ok('★ 点天气胶囊会弹出说明（不是「点了没反应」）',
+       document.querySelector('#toast').classList.contains('on') &&
+       document.querySelector('#toast').textContent === chipTipText);
     ok('★ 天气条高度符合紧凑预算（宽屏 ≤48 / 中屏 ≤90 / 窄屏 ≤140）', (() => {
       const h = wb.getBoundingClientRect().height;
       const vw = document.documentElement.clientWidth;

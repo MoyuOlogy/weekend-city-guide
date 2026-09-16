@@ -108,3 +108,10 @@
 }
 .tb.plus .pl .ri{color:#fff}
 .tb.plus:active .pl{transform:scale(.94)}
+
+/* 窄屏：顶栏的几个小圆钮在触屏上偏小（36 / 28px），各加 4px。
+   桌面端不变。 */
+@media(max-width:1023px){
+  .icon-btn{width:40px;height:40px}
+  .search-add{width:32px;height:32px}
+}

@@ -137,6 +137,122 @@
     })());
     mw.go('feed'); await sleep(120);
 
+    /* ============ B2. 375px：移动端触屏细节（v3.0） ============
+       这一整段都是「手机实测出来才知道有问题」的东西：
+       假期页要滚动、点赞点不准、表单会被 iOS 放大、滚到底还被悬浮按钮盖住。 */
+    const tabTop375 = () => md.querySelector('.tabbar').getBoundingClientRect().top;
+
+    // 1) 假期页一屏看完（原来手机上还要滚 176px）
+    mw.go('calendar'); await sleep(260);
+    ok('★ 375px：假期页一屏看完（日历 + 提醒 + 放假安排都在首屏里）', (() => {
+      const limit = tabTop375();
+      const a = md.querySelector('#calAlerts').getBoundingClientRect();
+      const g = md.querySelector('#calGrid').getBoundingClientRect();
+      const h = md.querySelector('#holidayList').getBoundingClientRect();
+      const fit = a.top >= 0 && a.bottom <= limit && g.bottom <= limit && h.bottom <= limit;
+      if(!fit) console.log('  假期页超出：提醒底 ' + Math.round(a.bottom) + ' / 日历底 ' + Math.round(g.bottom) +
+        ' / 放假安排底 ' + Math.round(h.bottom) + ' vs 底栏顶 ' + Math.round(limit));
+      return fit;
+    })());
+    ok('★ 375px：提醒与放假安排在手机上是「一行横滑」（不再折成好几行）', (() => {
+      const al = md.querySelector('#calAlerts'), hs = md.querySelector('#holidayList');
+      const oneRow = box => new Set([...box.children].map(e => Math.round(e.getBoundingClientRect().top))).size === 1;
+      return mw.getComputedStyle(al).flexWrap === 'nowrap' && mw.getComputedStyle(hs).flexWrap === 'nowrap' &&
+             oneRow(al) && oneRow(hs) && hs.scrollWidth > hs.clientWidth + 8;
+    })());
+    ok('375px：放假安排旁边有「左右滑动」提示（不然第 3 张之后就没人知道能滑）',
+       mw.getComputedStyle(md.querySelector('.swipe-hint')).display !== 'none');
+
+    // 2) 触屏点击目标：用 elementFromPoint 做真命中测试 —— rect 小不等于点不到，rect 大也不等于点得到
+    const hitHeight = el => {
+      const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const probes = dl => { const e = md.elementFromPoint(cx, cy + dl); return !!(e && e.closest('.' + el.className.split(' ')[0])); };
+      let up = 0, down = 0;
+      while(up < 30 && probes(-up - 3)) up += 3;
+      while(down < 30 && probes(down + 3)) down += 3;
+      return r.height + up + down;
+    };
+    mw.go('feed'); await sleep(220);
+    ok('★ 375px：卡片点赞的真实命中区 ≥40px（21px 的图标手指点不准）', (() => {
+      const hit = hitHeight(md.querySelector('#feed .note .like-wrapper'));
+      if(hit < 40) console.log('  点赞命中区只有 ' + Math.round(hit) + 'px');
+      return hit >= 40;
+    })());
+    ok('375px：顶栏图标按钮 ≥40px', md.querySelector('.icon-btn').getBoundingClientRect().height >= 40);
+    ok('375px：工具行按钮 ≥36px', md.querySelector('.pill').getBoundingClientRect().height >= 36);
+
+    // 3) 表单控件字号 ≥16px（<16px 时 iOS 聚焦会自动把整页放大）
+    mw.openFilter(); await sleep(220);
+    ok('★ 375px：表单控件字号 ≥16px（否则 iOS 一聚焦就自动放大页面）', (() => {
+      // 只查文字录入类控件：range 滑块没有字号概念，也不会触发 iOS 聚焦缩放
+      const ctrls = [...md.querySelectorAll('#sheetForm input:not([type=range]),#sheetForm select,#sheetForm textarea')]
+        .filter(e => e.offsetParent !== null);
+      if(!ctrls.length) return false;
+      const min = Math.min(...ctrls.map(e => parseFloat(mw.getComputedStyle(e).fontSize)));
+      if(min < 16) console.log('  最小控件字号 ' + min + 'px');
+      return min >= 16;
+    })());
+    mw.openSheet(null); await sleep(180);
+
+    // 4) 底部留白：滚到底时最后一张卡的点赞必须能露在悬浮发布按钮之上
+    mw.go('feed'); await sleep(200);
+    mw.scrollTo(0, md.documentElement.scrollHeight);
+    await sleep(120);
+    ok('★ 375px：滚到最底，最低那个点赞不会被悬浮发布按钮永久盖住', (() => {
+      const fab = md.querySelector('.fab').getBoundingClientRect();
+      const likes = [...md.querySelectorAll('#feed .note .like-wrapper')].map(e => e.getBoundingClientRect());
+      const lowest = likes.reduce((a, b) => (b.bottom > a.bottom ? b : a));
+      if(lowest.bottom > fab.top) console.log('  最低点赞底 ' + Math.round(lowest.bottom) + ' vs 悬浮按钮顶 ' + Math.round(fab.top));
+      return lowest.bottom <= fab.top + 1;
+    })());
+    mw.scrollTo(0, 0);
+
+    // 5) 触屏交互路径：isTouch() 读 matchMedia('(hover:none)')，无头默认是 hover:hover，
+    //    所以「单击延迟开详情 / 双击点赞」这条手机路径以前一次都没被跑到过。
+    const origMM = mw.matchMedia;
+    mw.matchMedia = q => q === '(hover:none)'
+      ? { matches:true, media:q, addEventListener(){}, removeEventListener(){}, addListener(){}, removeListener(){} }
+      : origMM.call(mw, q);
+    const evt = (el, type, ptr) => el.dispatchEvent(new (ptr ? mw.PointerEvent : mw.MouseEvent)(type, { bubbles:true, cancelable:true, view:mw }));
+    const pdown = el => { evt(el, 'pointerdown', 1); evt(el, 'mousedown'); };
+    const pup   = el => { evt(el, 'pointerup', 1);   evt(el, 'mouseup'); };
+    const tapCard = el => { pdown(el); pup(el); evt(el, 'click'); };
+    /* 双击要小心：第二下的 pointerup 会触发点赞 → renderFeed() 把整张卡换掉，
+       原来那个 <a> 被移出 DOM。如果还往那个旧元素上补 click，事件不会冒泡到 document，
+       于是 click 处理函数里的 preventDefault 不会执行，浏览器就会走 <a href="#/note/xx">
+       的默认行为 → hash 导航 → popstate → 详情弹窗被打开，看起来像「双击也打开了详情」。
+       真机不是这样：mousedown 目标被换掉后，浏览器会把 click 派发到该位置**当下还在**的元素上。
+       所以这里模拟成真机：click 发在重新查出来的那张卡上。 */
+    const coverOf = id => md.querySelector('#feed .note[data-id="' + id + '"] .cover');
+    mw.go('feed'); await sleep(250);
+    const tapId = md.querySelector('#feed .note').dataset.id;
+    // 点赞状态从 DOM 读（.like-wrapper.on）—— iLiked / store 是顶层 const/let，
+    // 跨 iframe 访问不到（只有函数声明才会变成 window 的属性）
+    const isLiked = () => {
+      const el = md.querySelector('#feed .note[data-id="' + tapId + '"] .like-wrapper');
+      return !!el && el.classList.contains('on');
+    };
+    const likedBefore = isLiked();
+    tapCard(md.querySelector('#feed .note .cover'));
+    await sleep(120);
+    const early = md.querySelector('#sheetDetail').classList.contains('on');
+    await sleep(260);
+    ok('★ 375px：触屏单击封面 —— 先等 240ms（给双击留时间）再打开详情', !early && md.querySelector('#sheetDetail').classList.contains('on'));
+    ok('触屏单击不会顺手点赞', isLiked() === likedBefore);
+    mw.openSheet(null); await sleep(160);
+    pdown(coverOf(tapId)); pup(coverOf(tapId));
+    await sleep(90);
+    pdown(coverOf(tapId)); pup(coverOf(tapId));
+    await sleep(60);
+    const freshCover = coverOf(tapId);          // 点赞后重渲染出来的新封面（真机上 click 就落在它上面）
+    if(freshCover) evt(freshCover, 'click');
+    await sleep(420);
+    ok('★ 375px：触屏双击封面 = 点赞，且不会打开详情', isLiked() === !likedBefore &&
+        !md.querySelector('#sheetDetail').classList.contains('on'));
+    mw.matchMedia = origMM;
+    mw.history.replaceState(null, '', mw.location.pathname);
+    mw.go('feed'); await sleep(150);
+
     /* ============ C. 宽屏 iframe：1280px 桌面 ============ */
     const d = await mkFrame(1280, 820);
     const dd = d.contentDocument, dw = d.contentWindow;

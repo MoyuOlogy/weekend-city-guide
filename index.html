@@ -118,7 +118,7 @@
       <span><i class="d-today"></i>今天</span>
     </div>
   </div>
-  <div class="sec-title" style="margin-top:14px">2026 年放假安排 <small>国办发明电〔2025〕7号</small></div>
+  <div class="sec-title" style="margin-top:14px">2026 年放假安排 <small><span class="swipe-hint">左右滑动 · </span>国办发明电〔2025〕7号</small></div>
   <div class="cal-holidays" id="holidayList"></div>
 </main>
 
@@ -207,12 +207,12 @@
 
       <section class="about-sec">
         <h2>质量验证</h2>
-        <p>用 Edge 无头浏览器真实加载页面、真实发网络请求跑出来的，共 5 套、257 项断言：</p>
+        <p>用 Edge 无头浏览器真实加载页面、真实发网络请求跑出来的，共 5 套、271 项断言：</p>
         <div class="feat-grid">
           <div class="feat"><b>颜色审计</b><span>递归扫描全部源码，断言不存在蓝 / 紫色相（hue 185°–335°）</span></div>
           <div class="feat"><b>行为测试 68 项</b><span>渲染 / 筛选 / 搜索 / 点赞 / 详情弹层 / 发布 / 合并与墓碑 / XSS 转义 / 持久化 / 首次访问的强制引导</span></div>
-          <div class="feat"><b>按钮审计 109 项</b><span>用真实鼠标事件序列逐个点击，断言不存在「点了没反应」的按钮</span></div>
-          <div class="feat"><b>布局与移动端 63 项</b><span>iframe 精确视口验证双端导航、列数、横向溢出、弹窗居中、引导对位与分端尺寸</span></div>
+          <div class="feat"><b>按钮审计 112 项</b><span>用真实鼠标事件序列逐个点击，断言不存在「点了没反应」的按钮</span></div>
+          <div class="feat"><b>布局与移动端 74 项</b><span>iframe 精确视口验证双端导航、列数、横向溢出、弹窗居中、引导对位，以及触屏点击目标 / 表单字号 / 触屏双击路径</span></div>
           <div class="feat"><b>跨设备同步 17 项</b><span>真连网络验证建房 → 发布 → 清空本地 → 从云端拉回</span></div>
         </div>
         <div class="note">复现方式：<code>powershell -File tests\run-tests.ps1</code>（需 Node.js + Edge）</div>
@@ -314,7 +314,7 @@
   <div class="list cols-2" id="meFavList"></div>
 
   <div class="foot">
-    周末探索 · v2.9 · 天气数据来自 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> ·
+    周末探索 · v3.0 · 天气数据来自 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> ·
     多设备同步基于 <a href="https://textdb.dev/" target="_blank" rel="noopener">textdb.dev</a> 公共存储 + 分享链接<br />
     <a href="https://github.com/MoyuOlogy/weekend-city-guide" target="_blank" rel="noopener">GitHub 仓库</a>
   </div>

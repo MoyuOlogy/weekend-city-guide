@@ -329,3 +329,34 @@ input[type=range]{width:100%;accent-color:var(--red);height:22px}
 }
 .kv{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);padding:5px 0}
 .kv b{color:var(--text);font-weight:500}
+
+/* =========================================================
+   窄屏 / 触屏细节（≤1023px，即「左侧栏换成底部 Tab」的那一档）
+   桌面端的样式一行都不动 —— 下面全是移动端实测出来的问题：
+     1. 卡片点赞只有 21px 高，手指根本点不准
+     2. 表单控件字号 14px<16px，iOS 一聚焦就自动放大整个页面
+     3. 底部留白比「底部 Tab + 悬浮按钮」矮，最后一张卡的点赞滚到底也被盖着
+   ========================================================= */
+@media(max-width:1023px){
+  /* 1. 放大点击目标：视觉尺寸基本不变，靠 padding + 伪元素把命中区撑到 ≥40px。
+        用 elementFromPoint 做过真命中测试，而不是只看 rect。 */
+  .note .like-wrapper{padding:6px 0}
+  .note .like-wrapper::before{content:"";position:absolute;inset:-7px -10px}
+  .pill{height:36px;padding:0 16px}
+  .chip{padding:9px 15px}
+  .sheet-head .x{width:34px;height:34px}
+  .mrow{padding:15px 14px}
+
+  /* 2. 表单控件 ≥16px：低于 16px 时 iOS Safari 聚焦会自动把页面放大 */
+  select,input[type=text],input[type=number],input[type=date],textarea{font-size:16px}
+
+  /* 3. 底部留白 ≥ 底部 Tab(55) + 悬浮发布按钮(52+66) —— 否则滚到最底，
+        最后一张卡的点赞还压在悬浮按钮底下，永远点不到 */
+  .masonry{padding-bottom:134px}
+  .page{padding-bottom:132px}
+  .foot{padding-bottom:20px}      /* 已在外层 .page 的留白里，不用再叠一份 */
+}
+
+/* 只在提示气泡里出现的长尾信息：触屏没有悬停，点一下要看得到 */
+[data-tip]{cursor:help}
+[data-tip]:active{opacity:.7}

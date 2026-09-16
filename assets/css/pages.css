@@ -121,3 +121,26 @@
   .about .kv-row{flex-direction:column;gap:2px}
   .about .kv-row b{flex:0 0 auto}
 }
+
+/* ================= 假期页：窄屏也要一屏看完 =================
+   375×667 上实测：提醒折 3 行占 96px、放假安排 7 行占 243px，
+   两项加起来把页面顶出视口 176px —— 一进页面就得往下滑，跟设计目标相反。
+   手机上把这两块都改成「一行横滑」：提醒 96→30px、放假安排 243→48px，
+   省下约 260px，日历 + 提醒 + 放假安排一屏全部可见。 */
+.swipe-hint{display:none}
+@media(max-width:560px){
+  .swipe-hint{display:inline}
+  .cal-alerts{
+    flex-wrap:nowrap;overflow-x:auto;gap:6px;padding-bottom:2px;
+    scroll-snap-type:x proximity;scrollbar-width:none
+  }
+  .cal-alerts::-webkit-scrollbar{display:none}
+  .cal-alert{flex:0 0 auto;height:30px;scroll-snap-align:start}
+  .cal-holidays{
+    display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;padding-bottom:4px;
+    scroll-snap-type:x proximity;scrollbar-width:none
+  }
+  .cal-holidays::-webkit-scrollbar{display:none}
+  .cal-hol{flex:0 0 auto;min-width:152px;scroll-snap-align:start}
+  .cal-head .icon-btn{width:32px;height:32px}      /* 月份切换：28px 在手机上点不准 */
+}
