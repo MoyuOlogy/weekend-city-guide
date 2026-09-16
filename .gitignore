@@ -5,11 +5,13 @@
 xiaohongshu.txt
 
 # 测试产物：临时注入页面、抓回来的 dump、套件日志、双端截图
+# 临时注入页写在仓库根目录（和 index.html 同级），这样 index.html 里相对路径的
+# assets/* 才能正确解析；因此下面几个模式不带前导斜杠，根目录与 tests/ 下都匹配。
+_tmp-*
+_probe-*
+_shot-*
 tests/_logs/
 tests/_shots/
-tests/_tmp-*
-tests/_probe-*
-tests/_shot-*
 
 # 本地工作区元数据（助手记忆等），不属于项目产物
 .workbuddy/

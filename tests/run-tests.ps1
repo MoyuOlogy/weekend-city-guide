@@ -34,7 +34,9 @@ function Invoke-BrowserSuite {
   param([string]$SnippetName, [int]$BudgetMs)
   $snippet = Get-Content -Raw -Encoding UTF8 (Join-Path $PSScriptRoot $SnippetName)
   $html = Get-Content -Raw -Encoding UTF8 $index
-  $tmp = Join-Path $PSScriptRoot ("_tmp-" + [IO.Path]::GetFileNameWithoutExtension($SnippetName) + ".html")
+  # 临时注入页必须写在**仓库根目录**（和 index.html 同级），不能写在 tests/ 下：
+  # index.html 用相对路径引用 assets/css/*、assets/js/*，换到 tests/ 就会全部 404。
+  $tmp = Join-Path $root ("_tmp-" + [IO.Path]::GetFileNameWithoutExtension($SnippetName) + ".html")
   Set-Content -Path $tmp -Value $html.Replace('</body>', $snippet + "`r`n</body>") -Encoding UTF8 -NoNewline
 
   $profile = Join-Path $env:TEMP ("wcgtests-" + [guid]::NewGuid().ToString('N').Substring(0, 8))

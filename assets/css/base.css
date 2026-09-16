@@ -1,0 +1,70 @@
+/* 周末探索 · base.css —— 变量 / reset / 排版 / 通用工具类 / toast / 页脚
+ *
+ * 由 index.html 拆分而来（index.html 的 <style>）。每个文件对应原文件里的一个注释模块，
+ * 内容是搬运而非重写。要改某个功能，改对应文件即可，不用翻整个 index.html。
+ */
+
+/* =========================================================
+   配色与尺寸取自小红书真实站点（xiaohongshu.txt）：
+   品牌红 #ff2442 · 正文 #333 · 次要 #999 · 分隔 #eee
+   布局：1440 视口下 5 列，卡片宽 215.2px，列间距 32px
+   ========================================================= */
+:root{
+  --red:#ff2442;
+  --red-soft:#fff0f3;
+  --text:#333333;
+  --text-2:#666666;
+  --muted:#999999;
+  --muted-2:#bbbbbb;
+  --bg:#ffffff;
+  --hover:#f7f7f7;
+  --fill:#f5f5f5;
+  --line:#eeeeee;
+  --amber:#e4831b; --amber-soft:#fff6e8;
+  --olive:#5f8f49; --olive-soft:#f0f7ec;
+  --shadow:0 4px 16px rgba(0,0,0,.08);
+  --shadow-lg:0 -6px 24px rgba(0,0,0,.1);
+  --r:8px;
+  --rail:200px;
+  --gap:32px;
+}
+html[data-theme=dark]{
+  --red:#ff4d6a; --red-soft:rgba(255,77,106,.14);
+  --text:#f2f2f2; --text-2:#c8c8c8; --muted:#9a9a9a; --muted-2:#777777;
+  --bg:#141414; --hover:#212121; --fill:#1f1f1f; --line:#2a2a2a;
+  --amber:#ffae4d; --amber-soft:rgba(255,174,77,.14);
+  --olive:#9cc47a; --olive-soft:rgba(156,196,122,.14);
+  --shadow:0 4px 16px rgba(0,0,0,.5);
+  --shadow-lg:0 -6px 24px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{margin:0;padding:0;-webkit-text-size-adjust:100%}
+body{
+  margin:0;padding:0;background:var(--bg);color:var(--text);min-height:100vh;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;overscroll-behavior-y:contain;
+  font-size:14px;line-height:1.4;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{border:none;background:none;cursor:pointer;padding:0}
+input,textarea,select{outline:none}
+::placeholder{color:var(--muted-2)}
+a{color:inherit;text-decoration:none}
+[hidden]{display:none !important}
+.wrap{max-width:1180px;margin:0 auto}
+/* 统一图标：全部用 24 网格的 SVG，不用 emoji */
+.ri{display:block;fill:currentColor;flex:0 0 auto}
+
+.about .kv-row b{flex:0 0 96px;color:var(--text);font-weight:600}
+.about .kv-row span{color:var(--text-2);min-width:0}
+.about .note{background:var(--fill);border-radius:10px;padding:12px 14px;margin:12px 0;font-size:12.5px;color:var(--text-2);line-height:1.8}
+
+/* toast */
+#toast{
+  position:fixed;left:50%;top:44%;transform:translate(-50%,-50%) scale(.92);opacity:0;pointer-events:none;z-index:300;
+  background:rgba(0,0,0,.8);color:#fff;padding:12px 22px;border-radius:8px;font-size:13.5px;font-weight:400;
+  max-width:80vw;text-align:center;line-height:1.5;transition:.2s
+}
+#toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.foot{text-align:center;color:var(--muted-2);font-size:11.5px;line-height:2;padding:8px 12px 100px}
+.foot a{color:var(--muted)}

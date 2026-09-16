@@ -63,12 +63,14 @@ def patch(page: str) -> str:
 
 
 def shot(name: str, w: int, h: int, page: str) -> None:
-    here = pathlib.Path(__file__).resolve().parent
-    inner = here / f'_shot-inner-{name}.html'
+    # 临时页必须放在目标 HTML 所在目录（仓库根目录）：index.html 用相对路径引用
+    # assets/css/*、assets/js/*，放到 tests/ 下这些引用会全部 404。
+    work = ROOT
+    inner = work / f'_shot-inner-{name}.html'
     inner.write_text(patch(page), encoding='utf-8')
     target, win_w, win_h = inner, w, h
     if w < 700:                                            # 窄屏用 iframe 强制精确视口
-        wrap = here / f'_shot-wrap-{name}.html'
+        wrap = work / f'_shot-wrap-{name}.html'
         wrap.write_text(
             '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
             f'<body style="margin:0;background:#fff"><iframe src="{inner.name}" '

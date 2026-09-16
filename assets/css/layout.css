@@ -1,0 +1,110 @@
+/* 周末探索 · layout.css —— 桌面左侧栏 / 顶栏 / 分类条 / 底部 Tab / 悬浮发布
+ *
+ * 由 index.html 拆分而来（index.html 的 <style>）。每个文件对应原文件里的一个注释模块，
+ * 内容是搬运而非重写。要改某个功能，改对应文件即可，不用翻整个 index.html。
+ */
+
+/* ================= 桌面左侧导航（对齐小红书 side-bar） ================= */
+/* 导航整体垂直居中（不再有 logo 与版本页脚，那些信息移到「关于」页） */
+.rail{
+  display:none;position:fixed;left:0;top:0;bottom:0;width:var(--rail);z-index:50;
+  flex-direction:column;justify-content:center;padding:16px 12px;background:var(--bg);
+  border-right:1px solid var(--line);overflow-y:auto
+}
+.rail-nav{display:flex;flex-direction:column}
+.rail-item{
+  display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;margin-bottom:8px;border-radius:10px;
+  font-size:15px;font-weight:500;color:var(--text);transition:background .15s;text-align:left
+}
+.rail-item .ri{color:var(--text-2);transition:color .15s}
+.rail-item:hover{background:var(--hover)}
+.rail-item.on{font-weight:600;background:var(--hover)}
+.rail-item.on .ri{color:var(--red)}
+.rail-sep{height:1px;background:var(--line);margin:10px 12px 16px}
+.shell{min-height:100vh}
+@media(min-width:1024px){ .shell{margin-left:var(--rail)} .rail{display:flex} }
+
+/* ================= 顶栏（对齐小红书搜索区） ================= */
+/* 分类条必须与搜索栏同处一个 sticky 容器：sticky 元素被限制在父容器范围内 */
+.topbar{
+  position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--bg) 94%,transparent);
+  backdrop-filter:saturate(1.8) blur(20px)
+}
+.topbar-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:14px 16px}
+.mlogo{display:flex;align-items:center;gap:6px;flex:0 0 auto;font-weight:800;font-size:15px}
+.mlogo i{
+  width:26px;height:26px;border-radius:7px;background:var(--red);color:#fff;display:grid;place-items:center;
+  font-style:normal;font-size:11px;font-weight:800
+}
+.searchbox{
+  flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:40px;padding:0 6px 0 12px;
+  background:var(--fill);border:1px solid transparent;border-radius:999px;transition:.18s
+}
+@media(min-width:1024px){ .searchbox{max-width:640px;margin:0 auto} }
+.searchbox:focus-within{background:var(--bg);border-color:var(--red)}
+.searchbox input{flex:1;border:none;background:none;font-size:14px;min-width:0}
+.searchbox .ri{color:var(--muted)}
+.search-add{
+  width:28px;height:28px;border-radius:50%;background:var(--bg);display:grid;place-items:center;color:var(--text-2);
+  transition:.15s;flex:0 0 auto
+}
+.search-add:hover{background:var(--red);color:#fff}
+.ask-btn{
+  display:none;align-items:center;gap:4px;height:28px;padding:0 12px;border-radius:999px;font-size:12.5px;
+  font-weight:600;color:var(--red);background:var(--red-soft);white-space:nowrap;flex:0 0 auto
+}
+@media(min-width:1024px){ .mlogo{display:none} .ask-btn{display:inline-flex} }
+.top-actions{display:flex;gap:8px;flex:0 0 auto}
+.icon-btn{
+  width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--text-2);
+  background:var(--fill);transition:.15s;flex:0 0 auto
+}
+.icon-btn:hover{background:var(--hover);color:var(--text)}
+.icon-btn:active{transform:scale(.93)}
+
+/* ================= 分类条（对齐小红书 channel） ================= */
+.catbar{position:static;border-bottom:1px solid var(--line)}
+.catbar-in{
+  max-width:1180px;margin:0 auto;display:flex;justify-content:center;gap:32px;overflow-x:auto;
+  padding:0 16px;scrollbar-width:none
+}
+.catbar-in::-webkit-scrollbar{display:none}
+.cat{
+  position:relative;padding:12px 0 13px;font-size:15px;color:var(--text-2);white-space:nowrap;
+  font-weight:500;transition:color .18s
+}
+.cat:hover{color:var(--text)}
+.cat.on{color:var(--text);font-weight:700}
+.cat.on::after{
+  content:"";position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:20px;height:3px;
+  border-radius:2px;background:var(--red)
+}
+@media(max-width:1023px){ .catbar-in{justify-content:flex-start;gap:24px} }
+
+/* ================= 底部 Tab（移动端） ================= */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;background:color-mix(in srgb,var(--bg) 94%,transparent);
+  backdrop-filter:blur(18px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)
+}
+@media(min-width:1024px){ .tabbar{display:none} }
+.tabbar-in{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;height:54px}
+/* 发布改到右下角悬浮按钮：底部只留 5 个导航格，不再挤进「＋」占一格 */
+.fab{
+  position:fixed;right:16px;bottom:calc(66px + env(safe-area-inset-bottom));z-index:61;
+  width:52px;height:52px;border-radius:50%;display:grid;place-items:center;
+  background:var(--red);color:#fff;box-shadow:0 6px 20px rgba(255,36,66,.38);transition:.16s
+}
+.fab:active{transform:scale(.93)}
+@media(min-width:1024px){ .fab{display:none} }
+.tb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:100%;color:var(--muted)}
+.tb .ri{color:var(--muted)}
+.tb span{font-size:10.5px;font-weight:500}
+.tb.on{color:var(--text)}
+.tb.on .ri{color:var(--text)}
+.tb.plus{position:relative}
+.tb.plus .pl{
+  position:absolute;top:-10px;width:46px;height:32px;border-radius:8px;display:grid;place-items:center;
+  background:var(--red);color:#fff;transition:.16s
+}
+.tb.plus .pl .ri{color:#fff}
+.tb.plus:active .pl{transform:scale(.94)}

@@ -16,7 +16,7 @@
   const mkFrame = (w, h) => new Promise(res => {
     const f = document.createElement('iframe');
     f.style.cssText = `position:fixed;left:-9999px;top:0;width:${w}px;height:${h}px;border:0`;
-    f.src = '../index.html';                 // 测试页位于 tests/，根目录即 index.html
+    f.src = './index.html';                   // 注入页与 index.html 同级（都在仓库根目录）
     f.onload = async () => {
       inject(f.contentDocument);
       await waitFor(() => f.contentDocument.querySelectorAll('#feed .note').length > 0, 60);
