@@ -33,6 +33,7 @@ async function refreshWeather(){
   renderCats();
   seedDemo();                        // 首次访问灌入示例数据，让四个页面都不是空白（我的页可一键清除）
   renderAll();
+  maybeStartTour();                  // 首次访问强制走一遍新手引导（不阻塞下面的天气请求）
   persistPrefs();
   if(me.nick) $('#meName').textContent = me.nick;
 

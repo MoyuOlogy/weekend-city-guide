@@ -29,22 +29,40 @@ BROWSER = next((b for b in BROWSERS if pathlib.Path(b).exists()), None)
 
 PAGES = ['feed', 'calendar', 'team', 'checkin', 'guide', 'me', 'about']
 
-# (文件名, 视口宽, 视口高, 目标页面)
+# 首次访问会强制弹新手引导 —— 截图时必须显式控制这个状态，否则「有没有弹」取决于
+# 上一次跑留下来的 localStorage，截出来的东西就不确定了。
+SEED_GUIDED = '<script>try{localStorage.setItem("wcg.guided.v2","1")}catch(e){}</script>'
+CLEAR_GUIDED = '<script>try{localStorage.removeItem("wcg.guided.v2")}catch(e){}</script>'
+# 引导看过之后关于页默认显示「项目说明」，这个脚本把它切回「新手指引」再截
+SHOW_GUIDE_TAB = ('<script>document.addEventListener("DOMContentLoaded",function(){'
+                  'try{setAboutTab("guide")}catch(e){}});</script>')
+# 直接在 DOMContentLoaded 里起引导：这样首帧就是「高亮 + 说明卡」的样子
+SPOTLIGHT = ('<script>document.addEventListener("DOMContentLoaded",function(){'
+             'try{startTour(1,true)}catch(e){}});</script>')
+
+# (文件名, 视口宽, 视口高, 目标页面, 注入到 <head> 的脚本)
 CASES = [
-    ('desktop-feed', 1440, 900, 'feed'),
-    ('desktop-calendar', 1440, 1000, 'calendar'),
-    ('desktop-guide', 1440, 900, 'guide'),
-    ('desktop-me', 1440, 900, 'me'),
-    ('desktop-about', 1440, 900, 'about'),
-    ('mobile-feed', 390, 844, 'feed'),
-    ('mobile-calendar', 390, 900, 'calendar'),
-    ('mobile-me', 390, 844, 'me'),
+    ('desktop-feed', 1440, 900, 'feed', SEED_GUIDED),
+    ('desktop-calendar', 1440, 1000, 'calendar', SEED_GUIDED),
+    ('desktop-guide', 1440, 900, 'guide', SEED_GUIDED),
+    ('desktop-onboarding', 1440, 900, 'about', SEED_GUIDED + SHOW_GUIDE_TAB),
+    ('desktop-about', 1440, 900, 'about', SEED_GUIDED),
+    ('desktop-me', 1440, 900, 'me', SEED_GUIDED),
+    ('mobile-feed', 390, 844, 'feed', SEED_GUIDED),
+    ('mobile-calendar', 390, 900, 'calendar', SEED_GUIDED),
+    ('mobile-me', 390, 844, 'me', SEED_GUIDED),
+    ('mobile-tour', 390, 844, 'feed', CLEAR_GUIDED),        # 第一次访问：引导遮罩
+    ('desktop-tour', 1440, 900, 'feed', SEED_GUIDED + SPOTLIGHT),   # 高亮态（第 2 步：天气条）
 ]
 
 
-def patch(page: str) -> str:
-    """把目标页面设成默认可见，隐藏其余页面，并同步导航高亮与分类条显隐。"""
-    s = HTML
+def patch(page: str, head: str = '') -> str:
+    """把目标页面设成默认可见，隐藏其余页面，并同步导航高亮与分类条显隐。
+
+    head 里的脚本插在 <head> 最前面：它在解析阶段就执行，早于所有 defer 脚本，
+    所以用来预置 localStorage 状态（比如「已经看过引导」）是可靠的。
+    """
+    s = HTML.replace('<head>', '<head>\n' + head, 1)
     for p in PAGES:
         tag = f'<main id="page-{p}"'
         m = re.search(re.escape(tag) + r'([^>]*)>', s)
@@ -62,12 +80,12 @@ def patch(page: str) -> str:
     return s
 
 
-def shot(name: str, w: int, h: int, page: str) -> None:
+def shot(name: str, w: int, h: int, page: str, head: str = '') -> None:
     # 临时页必须放在目标 HTML 所在目录（仓库根目录）：index.html 用相对路径引用
     # assets/css/*、assets/js/*，放到 tests/ 下这些引用会全部 404。
     work = ROOT
     inner = work / f'_shot-inner-{name}.html'
-    inner.write_text(patch(page), encoding='utf-8')
+    inner.write_text(patch(page, head), encoding='utf-8')
     target, win_w, win_h = inner, w, h
     if w < 700:                                            # 窄屏用 iframe 强制精确视口
         wrap = work / f'_shot-wrap-{name}.html'
@@ -91,13 +109,13 @@ def shot(name: str, w: int, h: int, page: str) -> None:
     inner.unlink(missing_ok=True)
     if target is not inner:
         target.unlink(missing_ok=True)
-    print(f'{name:20s} {png.stat().st_size if png.exists() else 0:>9,d} bytes  ({w}x{h}, page={page})')
+    print(f'{name:22s} {png.stat().st_size if png.exists() else 0:>9,d} bytes  ({w}x{h}, page={page})')
 
 
 if __name__ == '__main__':
     if not BROWSER:
         sys.exit('找不到 Edge / Chrome，无法截图')
     OUT.mkdir(exist_ok=True)
-    for n, w, h, p in CASES:
-        shot(n, w, h, p)
+    for n, w, h, p, head in CASES:
+        shot(n, w, h, p, head)
     print(f'\n输出目录：{OUT}')

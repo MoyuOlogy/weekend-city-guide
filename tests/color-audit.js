@@ -13,8 +13,8 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const MIN_COLORS = 60;           // 拆分前后实测都是 71 个；掉到 60 以下说明有文件没被扫到
-const EXPECT_CSS = 4;            // assets/css/*.css 至少这么多
-const EXPECT_JS = 20;            // assets/js/*.js 至少这么多
+const EXPECT_CSS = 5;            // assets/css/*.css 至少这么多
+const EXPECT_JS = 21;            // assets/js/*.js 至少这么多
 
 function collect(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

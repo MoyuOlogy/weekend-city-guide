@@ -8,12 +8,32 @@
   try{
     await sleep(2500);                       // 等 init + 天气返回
 
+    /* ---------- A0. 首次访问的强制新手引导 ----------
+       本套件每次都用全新 profile，等价于「第一次访问」，所以这一步会真的弹出来。
+       先断言它，再关掉 —— 遮罩会锁滚动，后面的断言得在干净状态下做。 */
+    const tourBox = document.querySelector('#tour');
+    ok('★ 首次访问自动弹出新手引导', !!tourBox && !tourBox.hidden);
+    ok('引导第一步是居中欢迎卡（不高亮元素），文案不为空',
+       document.querySelector('#tourHole').hidden === true &&
+       !!document.querySelector('#tourTitle').textContent && !!document.querySelector('#tourText').textContent);
+    ok('引导期间锁滚动、遮罩盖在弹窗层（z-index 80）之上',
+       document.documentElement.classList.contains('touring') && +getComputedStyle(tourBox).zIndex > 80);
+    document.querySelector('#tourSkip').click();
+    await sleep(250);
+    ok('★ 跳过引导后遮罩关闭、滚动解锁，并记住「看过了」',
+       tourBox.hidden === true && !document.documentElement.classList.contains('touring') &&
+       !!localStorage.getItem('wcg.guided.v2'));
+
     /* ---------- A. 结构渲染 ---------- */
     ok('分类条渲染 11 项（推荐+10类）', document.querySelectorAll('#catbar .cat').length === 11);
-    ok('底部 Tab 有 5 个导航项（发布移到悬浮按钮，日历/关于收进「我的」）', document.querySelectorAll('.tabbar .tb').length === 5);
-    ok('底部 Tab 不含日历/关于（否则第 6、7 格太挤）',
+    ok('底部 Tab 有 5 个导航项（发布移到悬浮按钮，假期/关于收进「我的」）', document.querySelectorAll('.tabbar .tb').length === 5);
+    ok('底部 Tab 不含假期/关于（否则第 6、7 格太挤）',
        !document.querySelector('.tb[data-page="calendar"]') && !document.querySelector('.tb[data-page="about"]'));
     ok('信息流渲染出卡片', document.querySelectorAll('#feed .note').length > 0);
+    go('about'); await sleep(200);
+    ok('★ 看过引导之后再进「关于」页，默认显示项目说明（不是引导）',
+       document.querySelector('#aboutReadme').hidden === false && document.querySelector('#aboutGuide').hidden === true);
+    go('feed'); await sleep(150);
     ok('瀑布流为多列', document.querySelectorAll('#feed .mcol').length >= 2);
     ok('卡片含封面/标题/点赞', !!document.querySelector('#feed .note .cover') &&
         !!document.querySelector('#feed .note .title') &&

@@ -27,12 +27,43 @@
     store: [store.teams.length, store.checkins.length, store.guides.length, store.activities.length,
             Object.keys(store.likes).length],
     form: (document.querySelector('#sheetForm') || {}).innerHTML ? document.querySelector('#sheetForm').innerHTML.length : 0,
-    toast: document.querySelector('#toast').textContent
+    toast: document.querySelector('#toast').textContent,
+    aboutTab: (document.querySelector('#aboutTabs .atab.on') || { dataset:{} }).dataset.atab || '',
+    tour: (document.querySelector('#tour') && !document.querySelector('#tour').hidden)
+            ? document.querySelector('#tourStepNo').textContent : ''
   });
-  const clearAll = () => { document.querySelectorAll('.sheet').forEach(s => s.classList.remove('on')); document.querySelector('#mask').classList.remove('on'); };
+  const clearAll = () => {
+    document.querySelectorAll('.sheet').forEach(s => s.classList.remove('on'));
+    document.querySelector('#mask').classList.remove('on');
+    if(tourOn) endTour(false);          // 审计里点到「开始引导」时要能收场
+  };
 
   try{
     await waitFor(() => document.querySelectorAll('#feed .note').length > 0);
+
+    /* ================= A0. 首次访问的强制新手引导 =================
+       本套件每次都用全新 profile，等价于「第一次访问」，所以引导会真的弹出来。
+       先断言它，再关掉 —— 遮罩会挡住后面的点击审计。 */
+    const tourBox = document.querySelector('#tour');
+    ok('★ 首次访问自动弹出新手引导', !!tourBox && !tourBox.hidden);
+    ok('引导遮罩是覆盖全屏的模态层（position:fixed 且盖过弹窗层）',
+       getComputedStyle(tourBox).position === 'fixed' && +getComputedStyle(tourBox).zIndex > 80);
+    ok('引导第一步：高亮框隐藏、「上一步」禁用', document.querySelector('#tourHole').hidden === true &&
+        document.querySelector('#tourPrev').disabled === true);
+    realClick(document.querySelector('#tourNext')); await sleep(250);
+    ok('★ 点「下一步」走到第 2 步，并高亮首页天气条', (() => {
+      const hole = document.querySelector('#tourHole');
+      if(document.querySelector('#tourStepNo').textContent !== '第 2 / ' + TOUR.length + ' 步') return false;
+      if(hole.hidden || document.querySelector('#page-feed').hidden) return false;
+      const r = document.querySelector('#weatherBar').getBoundingClientRect();
+      const h = hole.getBoundingClientRect();
+      return Math.abs(h.left - (r.left - 6)) < 3 && Math.abs(h.top - (r.top - 6)) < 3;
+    })());
+    realClick(document.querySelector('#tourPrev')); await sleep(250);
+    ok('★「上一步」能退回第 1 步', document.querySelector('#tourStepNo').textContent === '第 1 / ' + TOUR.length + ' 步');
+    realClick(document.querySelector('#tourSkip')); await sleep(250);
+    ok('★ 跳过引导后关闭、解锁滚动，并写入「看过了」标记', tourBox.hidden === true &&
+        !document.documentElement.classList.contains('touring') && !!localStorage.getItem('wcg.guided.v2'));
 
     /* ================= A. 卡片是真链接、点了真能进详情 ================= */
     const cover = document.querySelector('#feed .note .cover');
@@ -70,19 +101,28 @@
     document.querySelector('#sheetDetail [data-act="close"]').click(); await sleep(80);
 
     /* ================= B. 导航按钮全部可达 ================= */
-    const navs = [['feed','首页'], ['calendar','日历'], ['team','组队'], ['checkin','打卡'], ['guide','攻略'], ['me','我的'], ['about','关于']];
+    const navs = [['feed','首页'], ['team','组队'], ['checkin','打卡'], ['guide','攻略'], ['me','我的'], ['calendar','假期'], ['about','关于']];
     let navOk = true;
     for(const [page] of navs){
       const rail = document.querySelector(`.rail-item[data-page="${page}"]`);
       realClick(rail); await sleep(60);
       if(pagesShown().join() !== 'page-' + page) navOk = false;
     }
-    ok('★ 左侧栏 7 个导航（含日历/关于）都能切到对应页面', navOk);
-    // 底部 Tab 只放 5 个导航：日历 / 关于 在移动端收进「我的 → 更多」，
+    ok('★ 左侧栏 7 个导航（含假期/关于）都能切到对应页面', navOk);
+    // 侧栏顺序：首页 / 组队 / 打卡 / 攻略 / 我的 / 假期 / 关于
+    // —— 假期排在「我的」和「关于」之间（v2.9 调整）
+    ok('★ 侧栏「假期」排在「我的」和「关于」之间', (() => {
+      const items = [...document.querySelectorAll('.rail-nav > *')];
+      const iMe = items.findIndex(e => e.dataset.page === 'me');
+      const iCal = items.findIndex(e => e.dataset.page === 'calendar');
+      const iAbout = items.findIndex(e => e.dataset.page === 'about');
+      return iMe >= 0 && iCal === iMe + 1 && iAbout === iMe + 2;
+    })());
+    // 底部 Tab 只放 5 个导航：假期 / 关于 在移动端收进「我的 → 更多」，
     // 因为底部只有 5 格，再塞第 6、7 个横向就太挤了。
     const tbs = [...document.querySelectorAll('.tabbar .tb')];
     ok('★ 底部 Tab 恰好 5 个导航项', tbs.length === 5);
-    ok('底部 Tab 里没有「日历」「关于」', !document.querySelector('.tb[data-page="calendar"]') && !document.querySelector('.tb[data-page="about"]'));
+    ok('底部 Tab 里没有「假期」「关于」', !document.querySelector('.tb[data-page="calendar"]') && !document.querySelector('.tb[data-page="about"]'));
     let tabOk = true;
     for(const page of ['feed','team','checkin','guide','me']){
       const tb = document.querySelector(`.tb[data-page="${page}"]`);
@@ -92,15 +132,15 @@
     }
     ok('★ 底部 Tab 5 项都能切到对应页面', tabOk);
 
-    // 「我的 → 更多」：日历 / 关于 的移动端入口
+    // 「我的 → 更多」：假期 / 关于 的移动端入口
     go('me'); await sleep(150);
     const moreRows = [...document.querySelectorAll('#meMore .mrow')];
-    ok('★ 我的页有「更多」分组，含日历与关于', moreRows.length === 2 &&
+    ok('★ 我的页有「更多」分组，含假期与关于', moreRows.length === 2 &&
         !!document.querySelector('#meMore .mrow[data-page="calendar"]') &&
         !!document.querySelector('#meMore .mrow[data-page="about"]'));
     ok('「更多」分组里每一项都有说明文字', moreRows.every(r => (r.querySelector('.ts') || {}).textContent?.trim().length > 0));
     realClick(document.querySelector('#meMore .mrow[data-page="calendar"]')); await sleep(150);
-    ok('★ 我的页「日历」入口真能进日历页', pagesShown().join() === 'page-calendar');
+    ok('★ 我的页「假期」入口真能进假期页', pagesShown().join() === 'page-calendar');
     go('me'); await sleep(120);
     realClick(document.querySelector('#meMore .mrow[data-page="about"]')); await sleep(150);
     ok('★ 我的页「关于」入口真能进关于页', pagesShown().join() === 'page-about');
@@ -372,7 +412,7 @@
     go('feed'); await sleep(120);
     ok('回到首页重新显示分类导航条', document.querySelector('.catbar').hidden === false);
 
-    // 8) 日历页（v2.8 由「光阴」改名，并把提醒 / 格子 / 放假安排全面压缩到一屏）
+    // 8) 假期页（v2.8 由「光阴」改名「日历」，v2.9 再改名「假期」）
     go('calendar'); await sleep(250);
     ok('★ 日历页渲染出日历', !!document.querySelector('#calGrid') && document.querySelectorAll('#calGrid .cal-day').length >= 28);
     ok('日历标出了周末', document.querySelectorAll('#calGrid .cal-day.wk').length >= 4);
@@ -397,26 +437,54 @@
     ok('★ 日历可切到下个月', document.querySelector('#calTitle').textContent !== calTitle0);
     realClick(document.querySelector('#calToday')); await sleep(140);
     ok('★「回到今天」可用', document.querySelector('#calTitle').textContent === calTitle0);
-    // 日历/关于 不再是底部 Tab，停在这两页时底部应高亮「我的」（它们是我的的子页）
-    ok('★ 日历页时底部高亮「我的」而不是全灭', (() => {
+    // 假期/关于 不再是底部 Tab，停在这两页时底部应高亮「我的」（它们是我的的子页）
+    ok('★ 假期页时底部高亮「我的」而不是全灭', (() => {
       const meTab = document.querySelector('.tb[data-page="me"]');
       return meTab.classList.contains('on') && !document.querySelector('.tb[data-page="feed"]').classList.contains('on');
     })());
-    ok('★ 日历页时侧栏高亮的是「日历」本身', document.querySelector('.rail-item[data-page="calendar"]').classList.contains('on') &&
+    ok('★ 假期页时侧栏高亮的是「假期」本身', document.querySelector('.rail-item[data-page="calendar"]').classList.contains('on') &&
         document.querySelectorAll('.rail-item.on').length === 1);
     go('about'); await sleep(150);
     ok('★ 关于页时底部同样高亮「我的」', document.querySelector('.tb[data-page="me"]').classList.contains('on'));
     go('feed'); await sleep(120);
 
-    // 9) 关于页 = README 内容（v2.8 重排为块状）
+    // 9) 关于页 = 新手指引 + 项目说明（v2.9 起）
     go('about'); await sleep(180);
     const about = document.querySelector('#page-about');
-    ok('★ 关于页写入了 README 内容', about.textContent.includes('技术栈') && about.textContent.includes('已知限制') && about.textContent.includes('质量验证'));
-    ok('关于页标明数据来源', about.textContent.includes('Open-Meteo') && about.textContent.includes('textdb.dev') && about.textContent.includes('国办发明电'));
+    const paneGuide = () => document.querySelector('#aboutGuide');
+    const paneReadme = () => document.querySelector('#aboutReadme');
+    ok('★ 关于页有两个标签：新手指引 / 项目说明', document.querySelectorAll('#aboutTabs .atab').length === 2 &&
+        !!document.querySelector('#aboutTabGuide') && !!document.querySelector('#aboutTabReadme'));
+    ok('★ 已经看过引导，所以进入关于页默认显示「项目说明」', paneReadme().hidden === false && paneGuide().hidden === true);
+    realClick(document.querySelector('#aboutTabGuide')); await sleep(150);
+    ok('★ 点「新手指引」能切到引导面板', paneGuide().hidden === false && paneReadme().hidden === true &&
+        document.querySelector('#aboutTabGuide').classList.contains('on'));
+    ok('★ 引导面板列出全部步骤（条数 = TOUR 步数）',
+       document.querySelectorAll('#guideSteps .gstep').length === TOUR.length &&
+       document.querySelectorAll('#guideSteps .gstep').length >= 8);
+    ok('每一步都有标题与一句话说明', [...document.querySelectorAll('#guideSteps .gstep')].every(g =>
+        (g.querySelector('b') || {}).textContent?.trim().length > 0 && (g.querySelector('small') || {}).textContent?.trim().length > 0));
+    // 回放：点某一步 → 从那一步开始
+    realClick(document.querySelectorAll('#guideSteps .gstep')[6]); await sleep(300);
+    ok('★ 点第 7 步能从那一步开始回放', !document.querySelector('#tour').hidden &&
+        document.querySelector('#tourStepNo').textContent === '第 7 / ' + TOUR.length + ' 步');
+    ok('★ 回放时锁滚动、且遮罩盖住页面', document.documentElement.classList.contains('touring'));
+    realClick(document.querySelector('#tourSkip')); await sleep(250);
+    ok('★ 回放中「跳过」能结束', document.querySelector('#tour').hidden === true);
+    realClick(document.querySelector('#guidePlay')); await sleep(300);
+    ok('★ 「开始引导」按钮从第 1 步重放', !document.querySelector('#tour').hidden &&
+        document.querySelector('#tourStepNo').textContent === '第 1 / ' + TOUR.length + ' 步');
+    realClick(document.querySelector('#tourNext')); await sleep(250);
+    ok('★ 重放时「下一步」有效（切到第 2 步）', document.querySelector('#tourStepNo').textContent === '第 2 / ' + TOUR.length + ' 步');
+    realClick(document.querySelector('#tourSkip')); await sleep(220);
+    // 项目说明 = 原来的 README 内容
+    realClick(document.querySelector('#aboutTabReadme')); await sleep(150);
+    ok('★「项目说明」写入了 README 内容', about.textContent.includes('技术栈') && about.textContent.includes('已知限制') && about.textContent.includes('质量验证'));
+    ok('项目说明标明数据来源', about.textContent.includes('Open-Meteo') && about.textContent.includes('textdb.dev') && about.textContent.includes('国办发明电'));
     // v2.8：从「h2 + 大段文字」改成块状排版
-    ok('★ 关于页改成块状排版（hero 卡 + 卡片网格）', !!about.querySelector('.about-hero') &&
-        about.querySelectorAll('.feat-grid .feat').length >= 8 &&
-        about.querySelectorAll('.about-sec').length >= 4);
+    ok('★ 项目说明是块状排版（hero 卡 + 卡片网格）', !!about.querySelector('.about-hero') &&
+        paneReadme().querySelectorAll('.feat-grid .feat').length >= 8 &&
+        paneReadme().querySelectorAll('.about-sec').length >= 4);
     ok('★ 关于页不再出现「小红书」字样', !/小红书/.test(about.textContent));
     ok('★ 侧栏已去掉 logo 与版本页脚', !document.querySelector('.rail-logo') && !document.querySelector('.rail-foot'));
     ok('★ 侧栏「关于」与首页/打卡同在一组（在区隔线之前）', (() => {
@@ -468,6 +536,7 @@
       ...['feed','calendar','team','checkin','guide','me','about'].map(p => `.rail-item[data-page="${p}"]`),
       ...['feed','team','checkin','guide','me'].map(p => `.tb[data-page="${p}"]`),
       '#meMore .mrow[data-page="calendar"]', '#meMore .mrow[data-page="about"]',
+      '#aboutTabGuide', '#aboutTabReadme', '#guidePlay',
       ...document.querySelectorAll('#catbar .cat').length ? ['#catbar .cat:nth-child(2)', '#catbar .cat:nth-child(5)'] : []
     ];
     const dead = [];
@@ -499,6 +568,24 @@
       if(likeCount(id) === c) dead.push('like#' + id);
       audited++;
     }
+    // 「关于」页里的按钮只在切到关于页时才可见，单独审一遍
+    go('about'); await sleep(180);
+    const aboutSel = ['#aboutTabGuide', '#aboutTabReadme', '#guidePlay',
+                      '#guideSteps .gstep:nth-child(2)', '#tourSkip'];
+    for(const sel2 of aboutSel){
+      const el = document.querySelector(sel2);
+      if(!el || el.offsetWidth === 0) continue;
+      if(el.classList.contains('on')) continue;
+      const before = snap();
+      realClick(el);
+      await sleep(120);
+      const after = snap();
+      if(after === before && el.isConnected) dead.push('about:' + sel2);
+      audited++;
+      clearAll();
+      await sleep(40);
+    }
+    go('feed'); await sleep(120);
     ok(`★ 全站按钮审计：抽查 ${audited} 个可交互元素，无「点了没反应」的按钮${dead.length ? ' → ' + dead.join(', ') : ''}`, dead.length === 0);
   }catch(e){
     R.push('FAIL :: 运行异常 ' + (e && e.message));

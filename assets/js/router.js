@@ -8,7 +8,7 @@
 const PAGES = ['feed','calendar','team','checkin','guide','me','about'];
 function go(page){
   PAGES.forEach(p => { const el = $('#page-' + p); if(el) el.hidden = (p !== page); });
-  // 底部 Tab 高亮：日历 / 关于 在移动端是「我的」下的子页面，
+  // 底部 Tab 高亮：假期 / 关于 在移动端是「我的」下的子页面，
   // 停在它们上面时底部高亮「我的」，否则用户会看到 5 个 Tab 全都不亮、像迷路了。
   const tabPage = (page === 'calendar' || page === 'about') ? 'me' : page;
   $$('.tb').forEach(b => b.classList.toggle('on', b.dataset.page === tabPage));
@@ -18,6 +18,8 @@ function go(page){
   const cb = document.querySelector('.catbar');
   if(cb) cb.hidden = (page !== 'feed');
   if(page === 'calendar') renderCalendar();
+  // 关于页有两块内容（新手指引 / 项目说明）：没看过引导的人先看引导，看过的直接看说明
+  if(page === 'about') renderAbout();
   window.scrollTo({ top:0, behavior:'smooth' });
 }
 function toggleTheme(){

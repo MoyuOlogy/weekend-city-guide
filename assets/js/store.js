@@ -5,7 +5,7 @@
  */
 
 /* ---------------- 1. 数据层 ---------------- */
-const LS = { store:'wcg.store.v2', prefs:'wcg.prefs.v2', me:'wcg.me.v2', theme:'wcg.theme.v2' };
+const LS = { store:'wcg.store.v2', prefs:'wcg.prefs.v2', me:'wcg.me.v2', theme:'wcg.theme.v2', guided:'wcg.guided.v2' };
 let store = load(LS.store, { teams:[], checkins:[], guides:[], activities:[], likes:{}, tomb:[] });
 store.teams ||= []; store.checkins ||= []; store.guides ||= [];
 store.activities ||= []; store.likes ||= {}; store.tomb ||= [];

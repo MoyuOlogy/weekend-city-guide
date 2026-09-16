@@ -1,0 +1,60 @@
+/* 周末探索 · tour.css —— 新手引导
+ *
+ * 这里只有两块东西：
+ *   1. 「关于」页里的标签页（新手指引 / 项目说明）与引导步骤预览列表
+ *   2. .tour 全屏遮罩：在目标元素周围用 box-shadow「挖一个洞」，旁边跟一张说明卡
+ *
+ * 配色全部沿用全站令牌（主色 --red、淡红底 --red-soft、底色 --fill），不引入新色相 ——
+ * 颜色审计会扫这个文件。
+ */
+
+/* ================= 关于页：两个标签页 ================= */
+.about-tabs{display:flex;gap:5px;background:var(--fill);border-radius:12px;padding:4px;margin-bottom:16px}
+.atab{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:9px;
+  font-size:13.5px;font-weight:500;color:var(--text-2);transition:.16s
+}
+.atab:hover{color:var(--text)}
+.atab.on{background:var(--bg);color:var(--red);box-shadow:0 1px 3px rgba(0,0,0,.07)}
+
+/* ================= 新手指引面板 ================= */
+.gstart{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+.gstart .hint{font-size:12px;color:var(--text-2);line-height:1.6}
+.gsteps{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gstep{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  background:var(--fill);border-radius:10px;padding:10px 12px;transition:.16s
+}
+.gstep:hover{background:var(--red-soft)}
+.gstep:hover .gnum{background:var(--red);color:#fff}
+.gnum{
+  flex:0 0 22px;display:flex;align-items:center;justify-content:center;height:22px;border-radius:50%;
+  background:var(--bg);color:var(--red);font-size:11.5px;font-weight:700;transition:.16s
+}
+.gtxt{min-width:0}
+.gtxt b{display:block;font-size:13px;font-weight:600;color:var(--text)}
+.gtxt small{display:block;margin-top:2px;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gstep .ar{margin-left:auto;color:var(--muted-2)}
+@media(max-width:640px){ .gsteps{grid-template-columns:1fr} }
+
+/* ================= 全屏逐步引导遮罩 ================= */
+/* 引导期间锁住滚动：否则用户滑走之后高亮框会跟着目标跑出屏幕，看着像卡住了 */
+html.touring{overflow:hidden}
+.tour{position:fixed;inset:0;z-index:90}
+/* 没有高亮目标的那几步（欢迎 / 收尾）：整层压暗，让居中的说明卡浮起来 */
+.tour.dim{background:rgba(38,22,22,.6)}
+.tour-hole{
+  position:fixed;border-radius:12px;pointer-events:none;
+  box-shadow:0 0 0 2px rgba(255,36,66,.9), 0 0 0 9999px rgba(38,22,22,.6);
+  transition:left .22s,top .22s,width .22s,height .22s
+}
+.tour-tip{
+  position:fixed;width:min(420px,calc(100vw - 28px));
+  background:var(--bg);border-radius:14px;padding:15px 16px 13px;
+  box-shadow:0 12px 36px rgba(0,0,0,.26);transition:left .22s,top .22s
+}
+.tour-no{font-size:11.5px;font-weight:600;color:var(--red);letter-spacing:.3px}
+.tour-tip h3{margin:5px 0 6px;font-size:15.5px;font-weight:600;color:var(--text)}
+.tour-tip p{margin:0;font-size:13px;color:var(--text-2);line-height:1.75}
+.tour-acts{display:flex;align-items:center;gap:8px;margin-top:14px}
+.tour-acts .btn{height:32px;padding:0 15px;font-size:12.5px}

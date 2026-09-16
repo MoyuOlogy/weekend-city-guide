@@ -6,6 +6,11 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   try{
     await sleep(2200);
+    // 首次访问会弹出新手引导（遮罩 + 锁滚动）。本套件只做数据/网络断言，
+    // 但为了和真实使用状态一致，还是先把它关掉。
+    const tb = document.querySelector('#tour');
+    if(tb && !tb.hidden) document.querySelector('#tourSkip').click();
+    await sleep(150);
     me.nick = '设备A'; persistMe();
 
     /* ---- 1. 建房（真实网络：textdb.dev） ---- */

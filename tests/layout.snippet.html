@@ -28,7 +28,18 @@
 
   try{
     /* ============ A. 当前视口（无头默认 ~731px，走移动端布局） ============ */
+    /* 等 init 跑完（注入片段在主脚本之前执行，这里必须等），顺便等第一次访问的强制引导弹出来。
+       先断言它确实弹了，再关掉 —— 它锁滚动、还会切页面，后面的几何断言必须在关掉之后做。
+       （关掉会写入 localStorage 标记；同源的 iframe 会读到，所以下面的 iframe 里不会自动弹。） */
     await waitFor(() => document.querySelectorAll('#feed .note').length > 0, 40);
+    const tourOuter = document.querySelector('#tour');
+    ok('★ 首次访问自动弹出新手引导（遮挡全屏的模态层）', !!tourOuter && !tourOuter.hidden &&
+       getComputedStyle(tourOuter).position === 'fixed' && +getComputedStyle(tourOuter).zIndex > 80);
+    document.querySelector('#tourSkip').click();
+    await sleep(220);
+    ok('关掉引导后遮罩消失、滚动解锁', tourOuter.hidden === true &&
+       !document.documentElement.classList.contains('touring') && !!localStorage.getItem('wcg.guided.v2'));
+
     inject(document);                       // 先关掉过渡，保证下面的几何量测是最终值
     ok('分类条共 11 项（推荐 + 10 类）', document.querySelectorAll('#catbar .cat').length === 11);
     ok('分类条为纯文字（无 emoji）',
@@ -66,7 +77,7 @@
       const items = [...md.querySelectorAll('.tabbar .tb')], vw = md.documentElement.clientWidth;
       return items.length === 5 && items.every(e => { const r = e.getBoundingClientRect(); return r.right <= vw + 1 && r.left >= -1; });
     })());
-    ok('★ 375px：「我的」页里能看到「更多」（日历/关于入口）', (() => {
+    ok('★ 375px：「我的」页里能看到「更多」（假期/关于入口）', (() => {
       mw.go('me');                                   // #page-me 默认 hidden，量宽度前必须先切过去
       const box = md.querySelector('#meMore');
       const rows = [...md.querySelectorAll('#meMore .mrow')];
@@ -84,6 +95,47 @@
       const r = md.querySelector('.searchbox').getBoundingClientRect();
       return r.left >= -1 && r.right <= md.documentElement.clientWidth + 1;
     })());
+
+    /* v2.9：新手引导在手机上的对位 —— 高亮框必须套住目标，说明卡不能跑出屏幕 */
+    mw.startTour(1);                                   // 第 2 步：高亮首页天气条
+    await sleep(260);
+    ok('★ 375px：引导高亮框精确套住天气条', (() => {
+      const hole = md.querySelector('#tourHole');
+      if(hole.hidden) return false;
+      const r = md.querySelector('#weatherBar').getBoundingClientRect();
+      const h = hole.getBoundingClientRect();
+      return Math.abs(h.left - Math.max(r.left - 6, 4)) < 3 && Math.abs(h.top - Math.max(r.top - 6, 4)) < 3 &&
+             Math.abs(h.right - Math.min(r.right + 6, md.documentElement.clientWidth - 4)) < 3;
+    })());
+    ok('★ 375px：说明卡完整落在视口内（不溢出左右，也不被挤出上下）', (() => {
+      const t = md.querySelector('#tourTip').getBoundingClientRect();
+      const vw = md.documentElement.clientWidth, vh = md.documentElement.clientHeight;
+      return t.left >= 0 && t.right <= vw + 1 && t.top >= -1 && t.bottom <= vh + 1;
+    })());
+    ok('375px：引导期间锁住滚动', md.documentElement.classList.contains('touring'));
+    mw.endTour(false); await sleep(150);
+    ok('375px：结束引导后遮罩关闭、滚动解锁', md.querySelector('#tour').hidden === true &&
+       !md.documentElement.classList.contains('touring'));
+
+    /* 关于页在手机上是单列（步骤列表）。先点「新手指引」标签 —— 面板 hidden 时所有 rect 都是 0，
+       那样断言不量不到任何东西（曾经因此假红过一次）。 */
+    mw.go('about'); await sleep(160);
+    md.querySelector('#aboutTabGuide').click(); await sleep(150);
+    ok('★ 375px：关于页的引导步骤列表是单列', (() => {
+      const items = [...md.querySelectorAll('#guideSteps .gstep')];
+      const shown = items.filter(e => e.getBoundingClientRect().width > 0);
+      const rows = new Set(shown.map(e => Math.round(e.getBoundingClientRect().top)));
+      return items.length >= 8 && shown.length === items.length && rows.size === items.length;
+    })());
+    ok('375px：关于页两个标签都在视口内且可点', (() => {
+      const tabs = [...md.querySelectorAll('#aboutTabs .atab')];
+      const vw = md.documentElement.clientWidth;
+      return tabs.length === 2 && tabs.every(t => {
+        const r = t.getBoundingClientRect();
+        return r.left >= -1 && r.right <= vw + 1 && r.height >= 30;
+      });
+    })());
+    mw.go('feed'); await sleep(120);
 
     /* ============ C. 宽屏 iframe：1280px 桌面 ============ */
     const d = await mkFrame(1280, 820);
@@ -116,6 +168,46 @@
       const about = items.findIndex(e => e.dataset.page === 'about');
       return sep > 0 && home >= 0 && about > home && about < sep;
     })());
+    ok('★ 1280px：侧栏「假期」排在「我的」和「关于」之间', (() => {
+      const items = [...dd.querySelectorAll('.rail-nav > *')];
+      const iMe = items.findIndex(e => e.dataset.page === 'me');
+      const iCal = items.findIndex(e => e.dataset.page === 'calendar');
+      const iAbout = items.findIndex(e => e.dataset.page === 'about');
+      return iMe >= 0 && iCal === iMe + 1 && iAbout === iMe + 2;
+    })());
+
+    /* v2.9：桌面端的新手引导对位 + 关于页两列 */
+    dw.startTour(4);                                   // 第 5 步：高亮信息流第一张卡
+    await sleep(260);
+    ok('★ 1280px：引导高亮框精确套住目标卡片', (() => {
+      const hole = dd.querySelector('#tourHole');
+      if(hole.hidden) return false;
+      const cards = [...dd.querySelectorAll('#feed .note')].filter(n => !n.hidden);
+      if(!cards.length) return false;
+      const r = cards[0].getBoundingClientRect(), h = hole.getBoundingClientRect();
+      return Math.abs(h.left - Math.max(r.left - 6, 4)) < 3 && Math.abs(h.top - Math.max(r.top - 6, 4)) < 3;
+    })());
+    ok('★ 1280px：说明卡完整落在视口内', (() => {
+      const t = dd.querySelector('#tourTip').getBoundingClientRect();
+      const vw = dd.documentElement.clientWidth, vh = dd.documentElement.clientHeight;
+      return t.left >= 0 && t.right <= vw + 1 && t.top >= -1 && t.bottom <= vh + 1;
+    })());
+    dw.endTour(false); await sleep(150);
+    ok('1280px：结束引导后遮罩关闭', dd.querySelector('#tour').hidden === true);
+    dw.go('about'); await sleep(160);
+    ok('★ 1280px：看过引导后关于页默认显示「项目说明」（引导面板是收起的）',
+       dd.querySelector('#aboutReadme').hidden === false && dd.querySelector('#aboutGuide').hidden === true);
+    dd.querySelector('#aboutTabGuide').click(); await sleep(150);
+    ok('★ 1280px：关于页的引导步骤列表是两列', (() => {
+      const items = [...dd.querySelectorAll('#guideSteps .gstep')];
+      const shown = items.filter(e => e.getBoundingClientRect().width > 0);
+      const cols = new Set(shown.map(e => Math.round(e.getBoundingClientRect().left)));
+      const rows = new Set(shown.map(e => Math.round(e.getBoundingClientRect().top)));
+      // 步数是奇数，最后一行只有一张卡 —— 行数按 ceil(n/2) 算
+      return shown.length === items.length && items.length >= 8 && cols.size === 2 &&
+             rows.size === Math.ceil(items.length / 2);
+    })());
+    dw.go('feed'); await sleep(120);
     ok('★ 1280px：「我的」页不出现移动端的「更多」入口（桌面走左侧栏）', (() => {
       dw.go('me');
       const box = dd.querySelector('#meMore');
@@ -124,9 +216,9 @@
       return hidden;
     })());
 
-    /* v2.8：日历页要求「一进来就能看完日历 / 天气 / 假期提醒」，不用往下滑。
+    /* v2.8：假期页要求「一进来就能看完日历 / 天气 / 假期提醒」，不用往下滑。
        直接在 1280×820 的精确视口里量最后一个内容的 bottom，超出视口就是需要滚动。 */
-    ok('★ 1280px：日历页一屏看完，不用滚动', (() => {
+    ok('★ 1280px：假期页一屏看完，不用滚动', (() => {
       dw.go('calendar');
       const vh = dd.documentElement.clientHeight;
       const alerts = dd.querySelector('#calAlerts').getBoundingClientRect();
@@ -134,12 +226,12 @@
       const hols = dd.querySelector('#holidayList').getBoundingClientRect();
       const fits = alerts.top >= 0 && alerts.bottom <= vh &&
                    grid.bottom <= vh && hols.bottom <= vh - 6;   // 留 6px 呼吸
-      if(!fits) console.log('  日历页超出视口：提醒底 ' + Math.round(alerts.bottom) +
+      if(!fits) console.log('  假期页超出视口：提醒底 ' + Math.round(alerts.bottom) +
         ' / 日历底 ' + Math.round(grid.bottom) + ' / 放假安排底 ' + Math.round(hols.bottom) + ' vs 视口 ' + vh);
       dw.go('feed');
       return fits;
     })());
-    ok('★ 1280px：日历页提醒是一行内联（不占多行高度）', (() => {
+    ok('★ 1280px：假期页提醒是一行内联（不占多行高度）', (() => {
       dw.go('calendar');
       const items = [...dd.querySelectorAll('#calAlerts .cal-alert')];
       const rows = new Set(items.map(e => Math.round(e.getBoundingClientRect().top)));
