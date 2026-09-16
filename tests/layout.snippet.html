@@ -52,7 +52,8 @@
       clone.remove();
       return o === '1';
     })());
-    ok('卡片带入场动画类名 anim（渐进增强）', note.classList.contains('anim'));
+    // 入场动画是 IO 异步补的，等一下再看（这里只验证渐进增强确实生效，不依赖它显形）
+    ok('卡片带入场动画类名 anim（渐进增强）', await waitFor(() => document.querySelector('#feed .note.anim'), 20));
 
     /* ============ B. 窄屏 iframe：375px 手机 ============ */
     const m = await mkFrame(375, 700);

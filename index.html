@@ -163,14 +163,12 @@
   .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--red)}
 
   /* ================= 瀑布流（卡片结构对齐小红书 note-item） ================= */
-  .masonry{display:flex;align-items:flex-start;gap:8px;padding:12px 8px 110px}
-  @media(min-width:600px){ .masonry{gap:16px;padding-left:16px;padding-right:16px} }
-  @media(min-width:1024px){ .masonry{gap:24px;padding-bottom:48px} }
-  @media(min-width:1320px){ .masonry{gap:32px} }
-  .mcol{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
-  @media(min-width:600px){ .mcol{gap:16px} }
-  @media(min-width:1024px){ .mcol{gap:24px} }
-  @media(min-width:1320px){ .mcol{gap:32px} }
+  .masonry{display:flex;align-items:flex-start;gap:10px;padding:14px 10px 110px}
+  @media(min-width:560px){ .masonry{gap:16px;padding-left:18px;padding-right:18px} }
+  @media(min-width:1024px){ .masonry{gap:22px;padding-bottom:52px} }
+  .mcol{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0}
+  @media(min-width:560px){ .mcol{gap:16px} }
+  @media(min-width:1024px){ .mcol{gap:22px} }
 
   /* 卡片默认可见，入场动画只做增强（动画没跑也绝不能是空白） */
   .note{position:relative;opacity:1}
@@ -305,17 +303,24 @@
   .stat span{font-size:11.5px;color:var(--muted)}
   @media(max-width:360px){ .stat b{font-size:16px} }
 
-  .field{margin-bottom:16px}
-  .field>label{display:block;font-size:13px;color:var(--text-2);font-weight:500;margin-bottom:8px}
+  .field{margin-bottom:12px}
+  .field>label{display:block;font-size:12.5px;color:var(--text-2);font-weight:500;margin-bottom:6px}
   select,input[type=text],input[type=number],input[type=date],textarea{
-    width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);
+    width:100%;padding:9px 13px;border-radius:10px;border:1px solid var(--line);background:var(--bg);
     font-size:14px;transition:.15s
   }
   select:focus,input:focus,textarea:focus{border-color:var(--red)}
-  textarea{resize:vertical;min-height:88px;line-height:1.6}
+  textarea{resize:vertical;min-height:66px;line-height:1.6}
   input[type=range]{width:100%;accent-color:var(--red);height:22px}
   .two-col{display:flex;gap:10px}
   .two-col>*{flex:1;min-width:0}
+  .three-col{display:flex;gap:8px}
+  .three-col>*{flex:1;min-width:0}
+  /* 提交按钮粘在弹窗底部 —— 表单再长也不用下拉才能点到 */
+  .form-actions{
+    position:sticky;bottom:0;z-index:3;background:var(--bg);border-top:1px solid var(--line);
+    padding:12px 0 2px;margin-top:4px
+  }
   .chips{display:flex;flex-wrap:wrap;gap:8px}
   .chip{
     padding:7px 14px;border-radius:999px;font-size:13px;background:var(--fill);color:var(--text-2);
@@ -491,7 +496,7 @@
   <button class="rail-item" id="railPublish"><svg class="ri" width="24" height="24"><use href="#i-create"></use></svg>发布</button>
   <button class="rail-item" id="railSync"><svg class="ri" width="24" height="24"><use href="#i-sync"></use></svg>跨设备同步</button>
   <button class="rail-item" id="railTheme"><svg class="ri" width="24" height="24"><use href="#i-moon"></use></svg>切换主题</button>
-  <div class="rail-foot">周末探索 v2.4<br />天气 · Open-Meteo<br />同步 · textdb.dev</div>
+  <div class="rail-foot">周末探索 v2.5<br />天气 · Open-Meteo<br />同步 · textdb.dev</div>
 </aside>
 
 <div class="shell">
@@ -590,7 +595,7 @@
   <div class="list cols-2" id="meFavList"></div>
 
   <div class="foot">
-    周末探索 · v2.4 · 天气数据来自 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> ·
+    周末探索 · v2.5 · 天气数据来自 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> ·
     多设备同步基于 <a href="https://textdb.dev/" target="_blank" rel="noopener">textdb.dev</a> 公共存储 + 分享链接<br />
     <a href="https://github.com/MoyuOlogy/weekend-city-guide" target="_blank" rel="noopener">GitHub 仓库</a>
   </div>
@@ -857,7 +862,7 @@ function coverHTML(a, h, extra){
     ${extra || ''}
   </div>`;
 }
-const coverHeights = [150, 190, 130, 170, 145, 205];
+const coverHeights = [190, 240, 165, 215, 180, 255];
 
 /* ---------------- 5. 信息流 ---------------- */
 let cat = '全部', keyword = '';
@@ -896,21 +901,22 @@ function renderFeed(){
   feed.innerHTML = buckets.map(b => `<div class="mcol">${b.join('')}</div>`).join('');
   observeIn();
 
-  /* 卡片结构对齐小红书 .note-item：cover / title / author-wrapper / like-wrapper */
+  /* 卡片结构对齐小红书 .note-item：cover / title / author-wrapper / like-wrapper
+     封面与标题是真正的 <a href="#/note/id"> 链接：可分享、可中键新开标签页、支持浏览器前进后退 */
   function cardHTML(x, i){
     const a = x.a, liked = iLiked(a.id), h = coverHeights[hash(a.id) % coverHeights.length];
-    const tap = `data-tap="detail" data-id="${a.id}"`;
+    const href = `#/note/${a.id}`, link = `href="${href}" data-note="${a.id}"`;
     return `<article class="note" data-id="${a.id}">
-      <a class="cover" ${tap} style="height:${h}px;background:linear-gradient(135deg,${coverGrad(a).join(',')})">
+      <a class="cover" ${link} style="height:${h}px;background:linear-gradient(135deg,${coverGrad(a).join(',')})">
         ${coverDecor(a)}
         <span class="emo">${TYPE_EMOJI[a.type] || '🎈'}</span>
         <span class="badge bl ${a.price === 0 ? 'free' : ''}">${a.price === 0 ? '免费' : '¥' + a.price}</span>
         <span class="badge tr">${x.score}% 匹配</span>
       </a>
       <div class="footer">
-        <a class="title" ${tap}>${esc(a.name)}</a>
+        <a class="title" ${link}>${esc(a.name)}</a>
         <div class="author-wrapper">
-          <a class="author" ${tap}>
+          <a class="author" ${link}>
             <span class="avatar-container">${me.emoji}</span>
             <span class="name">${esc(a.type)} · ${esc(prefs.people)}人 · ${a.dist}km</span>
           </a>
@@ -956,7 +962,12 @@ function openSheet(name, html){
   if(name){ $(sheets[name]).innerHTML = html; $('#mask').classList.add('on'); openSheetName = name; }
   else { $('#mask').classList.remove('on'); openSheetName = null; }
 }
-$('#mask').addEventListener('click', () => openSheet(null));
+const closeSheet = () => {
+  const wasNote = /^#\/note\//.test(location.hash);
+  openSheet(null);
+  if(wasNote) try{ history.replaceState(null, '', location.pathname); }catch{}   // 关掉详情时清掉 hash
+};
+$('#mask').addEventListener('click', () => closeSheet());
 document.addEventListener('keydown', e => { if(e.key === 'Escape') openSheet(null); });
 
 /* ---------------- 7. 详情弹层 ---------------- */
@@ -1043,7 +1054,7 @@ function openFilter(){
         ${[['near','离我近一点'],['cheap','越省越好'],['photo','适合出片'],['newbie','新手友好']]
           .map(([k, t]) => `<div class="chip ${prefs.extras.includes(k) ? 'on' : ''}" data-extra="${k}">${t}</div>`).join('')}
       </div></div>
-      <button class="btn block line" id="resetPrefs">↺ 恢复默认</button>
+      <div class="form-actions"><button class="btn block line" id="resetPrefs">恢复默认</button></div>
     </div>`);
 }
 
@@ -1071,45 +1082,43 @@ const pubTeam = () => `
     <div class="field"><label>招募人数（含自己）</label><input type="number" id="tCap" min="2" max="20" value="4" /></div>
     <div class="field"><label>人均预算（元）</label><input type="number" id="tBudget" min="0" max="2000" value="80" /></div>
   </div>
-  <button class="btn pri block" id="tCreate">发布组队 🚀</button>`;
+  <div class="form-actions"><button class="btn pri block" id="tCreate">发布组队</button></div>`;
 const pubCheckin = () => `
   ${nickField()}
   <div class="field"><label>去了哪里</label><input type="text" id="cTitle" placeholder="例如：老城区创意市集" maxlength="40" /></div>
-  <div class="two-col">
+  <div class="three-col">
     <div class="field"><label>日期</label><input type="date" id="cDate" value="${ymd(new Date())}" /></div>
-    <div class="field"><label>花费（人均 / 元）</label><input type="number" id="cCost" min="0" max="5000" value="0" /></div>
+    <div class="field"><label>花费（元/人）</label><input type="number" id="cCost" min="0" max="5000" value="0" /></div>
+    <div class="field"><label>时长（小时）</label><input type="number" id="cHours" min="0.5" max="24" step="0.5" value="2" /></div>
   </div>
-  <div class="field"><label>时长（小时）</label><input type="number" id="cHours" min="0.5" max="24" step="0.5" value="2" /></div>
   <div class="field"><label>心情</label><div class="chips" id="cMood">
     ${[['🤩','超值'],['😌','治愈'],['🥵','累但爽'],['😐','一般'],['😭','踩雷']]
       .map(([m, t], i) => `<div class="chip ${i === 0 ? 'on' : ''}" data-mood="${m}">${m} ${t}</div>`).join('')}
   </div></div>
   <div class="field"><label>一句话感想</label><textarea id="cNote" placeholder="有什么值得告诉后来人的？"></textarea></div>
-  <button class="btn pri block" id="cAdd">记录打卡 📍</button>`;
+  <div class="form-actions"><button class="btn pri block" id="cAdd">记录打卡</button></div>`;
 const pubGuide = () => `
   ${nickField()}
   <div class="field"><label>标题</label><input type="text" id="gTitle" placeholder="例如：0 元逛完老城区的 5 个点" maxlength="50" /></div>
-  <div class="field"><label>正文</label><textarea id="gBody" placeholder="路线、时间、避坑点、预算…" style="min-height:130px" maxlength="600"></textarea></div>
+  <div class="field"><label>正文</label><textarea id="gBody" placeholder="路线、时间、避坑点、预算…" style="min-height:100px" maxlength="600"></textarea></div>
   <div class="field"><label>标签（逗号分隔）</label><input type="text" id="gTags" placeholder="免费, 拍照, 步行" maxlength="60" /></div>
-  <button class="btn pri block" id="gAdd">发布攻略 🚀</button>`;
+  <div class="form-actions"><button class="btn pri block" id="gAdd">发布攻略</button></div>`;
 const pubActivity = () => `
   <div class="field"><label>活动名称</label><input type="text" id="nName" placeholder="例如：大学城天台看日落" maxlength="40" /></div>
   <div class="two-col">
     <div class="field"><label>类型</label><select id="nType">${TYPES.map(t => `<option>${t}</option>`).join('')}</select></div>
     <div class="field"><label>人均价格（元）</label><input type="number" id="nPrice" min="0" value="0" /></div>
   </div>
-  <div class="two-col">
+  <div class="three-col">
     <div class="field"><label>时长（小时）</label><input type="number" id="nHours" min="0.5" step="0.5" value="2" /></div>
     <div class="field"><label>距离（km）</label><input type="number" id="nDist" min="0" step="0.5" value="3" /></div>
-  </div>
-  <div class="two-col">
     <div class="field"><label>最少人数</label><input type="number" id="nMin" min="1" value="1" /></div>
     <div class="field"><label>最多人数</label><input type="number" id="nMax" min="1" value="6" /></div>
   </div>
   <div class="field"><label>场地</label><div class="chips" id="nIndoor">
     <div class="chip on" data-indoor="0">🌤 户外</div><div class="chip" data-indoor="1">🏠 室内</div></div></div>
   <div class="field"><label>一句话介绍</label><textarea id="nDesc" placeholder="怎么玩、有什么亮点" maxlength="200"></textarea></div>
-  <button class="btn pri block" id="nAdd">加入活动库</button>`;
+  <div class="form-actions"><button class="btn pri block" id="nAdd">加入活动库</button></div>`;
 function nickField(){
   return `<div class="field"><label>昵称（显示给同伴）</label>
     <input type="text" id="nickInput" value="${esc(me.nick)}" placeholder="例如：小新" maxlength="12" /></div>`;
@@ -1246,12 +1255,12 @@ function renderMe(){
   $('#meFavList').innerHTML = favs.length ? favs.map(a => {
     const g = coverGrad(a);
     return `<div class="row-card" style="display:flex;gap:12px;align-items:center">
-      <div style="width:46px;height:46px;border-radius:8px;display:grid;place-items:center;font-size:20px;background:linear-gradient(135deg,${g[0]},${g[1]})">${TYPE_EMOJI[a.type] || '🎈'}</div>
+      <a href="#/note/${a.id}" data-note="${a.id}" style="width:46px;height:46px;border-radius:8px;display:grid;place-items:center;font-size:20px;background:linear-gradient(135deg,${g[0]},${g[1]})">${TYPE_EMOJI[a.type] || '🎈'}</a>
       <div style="flex:1;min-width:0">
-        <h3 style="margin:0;font-size:14px;font-weight:600">${esc(a.name)}</h3>
+        <a href="#/note/${a.id}" data-note="${a.id}"><h3 style="margin:0;font-size:14px;font-weight:600;color:var(--text)">${esc(a.name)}</h3></a>
         <div class="meta">${esc(a.type)} · ${a.price === 0 ? '免费' : '¥' + a.price} · ${a.hours}h</div>
       </div>
-      <button class="btn line" data-act="detail" data-id="${a.id}">查看</button>
+      <a class="btn line" href="#/note/${a.id}" data-note="${a.id}">查看</a>
     </div>`;
   }).join('') : `<div class="empty">还没有收藏，在推荐里点心形图标就会出现在这里</div>`;
   observeIn();
@@ -1278,11 +1287,11 @@ function syncThemeIcons(){
     if(u) u.setAttribute('href', id);
   });
 }
-// 瀑布流列数：窄屏 2 列 → 桌面最多 5 列（跟随容器宽度，缩放窗口即时生效）
+// 瀑布流列数：窄屏 2 列 → 桌面最多 4 列（列数少一点、卡片大一点，比 5 列一排更耐看）
 function colCount(){
   const el = $('#feed');
   const w = (el ? el.clientWidth : 0) || window.innerWidth;
-  return w < 520 ? 2 : w < 860 ? 3 : w < 1180 ? 4 : 5;
+  return w < 560 ? 2 : w < 860 ? 3 : 4;
 }
 
 /* ---------------- 15. 云同步（textdb.dev 公共存储 + 分享链接） ---------------- */
@@ -1452,8 +1461,8 @@ function decodeState(str){
 }
 async function makeShareLink(){
   const url = location.origin + location.pathname + '#r=' + encodeState();
-  try{ await navigator.clipboard.writeText(url); toast(url.length > 8000 ? '链接较长，已复制（建议用云端房间发送）' : '分享链接已复制'); }
-  catch{ toast('链接已生成，请手动复制'); }
+  // 先把面板渲染出来，再尝试写剪贴板。
+  // 反过来的话，剪贴板被权限/无焦点阻塞时 await 不返回，用户会看到「点了没反应」。
   openSheet('form', `
     <div class="sheet-head"><h3>分享链接</h3><p>任何设备打开即导入，永久有效</p><button class="x" data-act="close"><svg class="ri" width="16" height="16"><use href="#i-close"></use></svg></button></div>
     <div class="sheet-body">
@@ -1461,11 +1470,32 @@ async function makeShareLink(){
       <p class="hintline">链接较长是因为把组队 / 打卡 / 攻略都打包进去了。</p>
       <div class="btnrow"><button class="btn pri" data-act="copylink" data-link="${esc(url)}"><svg class="ri" width="16" height="16"><use href="#i-copy"></use></svg>复制链接</button></div>
     </div>`);
+  try{
+    await navigator.clipboard.writeText(url);
+    toast(url.length > 8000 ? '链接较长，已复制（建议用云端房间发送）' : '分享链接已复制');
+  }catch{ toast('链接已生成，点下方按钮复制'); }
 }
 
 /* ---------------- 16. 事件总线 ---------------- */
+const isTouch = () => matchMedia('(hover:none)').matches;   // 触屏才用「双击点赞」那套延迟逻辑
+
+// 打开活动详情 + 写入 hash（真链接语义：可分享、可前进后退）
+function openNote(id){
+  if(!findAct(id)) return;
+  openDetail(id);
+  try{ history.pushState({ note:id }, '', '#/note/' + id); }catch{}
+}
 document.addEventListener('click', async e => {
   const t = e.target;
+
+  // 卡片 / 标题 / 作者都是真链接：桌面立即打开（不再等 240ms，避免被误判成双击）
+  const noteLink = t.closest('[data-note]');
+  if(noteLink){
+    if(e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;   // 允许新标签页打开
+    e.preventDefault();
+    if(isTouch()) return;            // 触屏交给 pointerup，保留双击点赞
+    return openNote(noteLink.dataset.note);
+  }
 
   // 导航：移动端底部 Tab / 桌面端左侧栏 / 顶栏「＋」（＋ 必须先判断，否则会被通用规则吃掉）
   if(t.closest('#plusBtn') || t.closest('#railPublish') || t.closest('#postMini')){ buzz(); return openPublish(null); }
@@ -1493,7 +1523,7 @@ document.addEventListener('click', async e => {
   const act = btn?.dataset.act;
 
   switch(act){
-    case 'close': return openSheet(null);
+    case 'close': return closeSheet();
     case 'detail': return openDetail(btn.dataset.id);
     case 'like': {
       const id = btn.dataset.id;
@@ -1633,19 +1663,27 @@ document.addEventListener('change', e => {
   if(t.id === 'fDay'){ prefs.day = +t.value; persistPrefs(); renderWeatherBar(); refreshWeather(); }
 });
 
-// 双击封面点赞（移动端 double tap 兼容）
+// 双击封面点赞 —— 只在触屏上启用。
+// 桌面端绝不能走这条逻辑：鼠标用户点一下没反应会再点一下，于是被判成「双击」而永远打不开详情。
 let lastTap = 0, tapTimer = null;
 document.addEventListener('pointerup', e => {
-  const wrap = e.target.closest('[data-tap="detail"]');
+  if(!isTouch()) return;
+  const wrap = e.target.closest('[data-note]');
   if(!wrap) return;
-  const id = wrap.dataset.id, now = Date.now();
+  const id = wrap.dataset.note, now = Date.now();
   if(now - lastTap < 300){
     clearTimeout(tapTimer); lastTap = 0;
     likeActivity(id); renderFeed(); return;   // 双击 = 点赞（不打开详情）
   }
   lastTap = now;
   clearTimeout(tapTimer);
-  tapTimer = setTimeout(() => { openDetail(id); }, 240);
+  tapTimer = setTimeout(() => openNote(id), 240);
+});
+
+// 浏览器前进/后退 与 直接打开 #/note/xxx 链接
+window.addEventListener('popstate', () => {
+  const m = location.hash.match(/^#\/note\/(.+)$/);
+  if(m && findAct(m[1])) openDetail(m[1]); else openSheet(null);
 });
 
 /* ---------------- 17. 导入 / 导出 ---------------- */
@@ -1662,7 +1700,7 @@ function openImport(){
     <div class="sheet-head"><h3>导入数据</h3><p>粘贴导出的 JSON，或直接打开别人的分享链接</p><button class="x" data-act="close"><svg class="ri" width="16" height="16"><use href="#i-close"></use></svg></button></div>
     <div class="sheet-body">
       <div class="field"><label>粘贴 JSON</label><textarea id="impText" placeholder='{"teams":[...],"guides":[...]}' style="min-height:130px;font-size:12px"></textarea></div>
-      <button class="btn pri block" id="doImport">导入并合并</button>
+      <div class="form-actions"><button class="btn pri block" id="doImport">导入并合并</button></div>
     </div>`);
   $('#doImport')?.addEventListener('click', () => {
     try{
@@ -1681,7 +1719,7 @@ function editNick(){
       <div class="field"><label>头像</label><div class="chips" id="emojiPick">
         ${LOGIN_EMOJI.map(m => `<div class="chip ${m === me.emoji ? 'on' : ''}" data-emoji="${m}">${m}</div>`).join('')}
       </div></div>
-      <button class="btn pri block" id="saveNick">保存</button>
+      <div class="form-actions"><button class="btn pri block" id="saveNick">保存</button></div>
     </div>`);
   $('#emojiPick').addEventListener('click', e => {
     const c = e.target.closest('[data-emoji]'); if(!c) return;
@@ -1725,6 +1763,10 @@ async function refreshWeather(){
   persistPrefs();
   renderFeed();                      // 先渲染骨架屏，天气回来后自动替换
   if(me.nick) $('#meName').textContent = me.nick;
+
+  // 直接打开 #/note/xxx 深链（可分享、可刷新、可从聊天记录点回来）
+  const noteMatch = location.hash.match(/^#\/note\/(.+)$/);
+  if(noteMatch && findAct(noteMatch[1])) openDetail(noteMatch[1]);
   await refreshWeather();
   if(me.room){ sync.join(me.room); }   // 自动重连上次的房间
   // 心跳保持在线状态

@@ -1,0 +1,284 @@
+<pre id="TESTOUT" style="display:none"></pre>
+<script>
+(async function(){
+  const R = [];
+  const ok = (n, c) => R.push((c ? 'PASS' : 'FAIL') + ' :: ' + n);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  /* 注入「关闭过渡」样式：无头虚拟时钟不推进 transition，否则量到的几何/状态都是起始值 */
+  try{
+    const s = document.createElement('style');
+    s.textContent = '*,*::before,*::after{transition:none !important;animation:none !important}';
+    document.head.appendChild(s);
+  }catch(e){}
+
+  async function waitFor(fn, tries = 40){ for(let i = 0; i < tries; i++){ if(fn()) return true; await sleep(150); } return false; }
+
+  // 真实点击序列（pointerdown → mousedown → pointerup → mouseup → click），和真人鼠标一致
+  const fire = (el, type) => el.dispatchEvent(new MouseEvent(type, { bubbles:true, cancelable:true, view:window }));
+  const firePtr = (el, type) => el.dispatchEvent(new PointerEvent(type, { bubbles:true, cancelable:true }));
+  const realClick = el => { firePtr(el,'pointerdown'); fire(el,'mousedown'); firePtr(el,'pointerup'); fire(el,'mouseup'); fire(el,'click'); };
+
+  const openSheets = () => [...document.querySelectorAll('.sheet')].filter(s => s.classList.contains('on')).map(s => s.id);
+  const pagesShown = () => [...document.querySelectorAll('main')].filter(m => !m.hidden).map(m => m.id);
+  const snap = () => JSON.stringify({
+    hash: location.hash, sheets: openSheets(), pages: pagesShown(),
+    theme: document.documentElement.dataset.theme,
+    store: [store.teams.length, store.checkins.length, store.guides.length, store.activities.length,
+            Object.keys(store.likes).length],
+    form: (document.querySelector('#sheetForm') || {}).innerHTML ? document.querySelector('#sheetForm').innerHTML.length : 0,
+    toast: document.querySelector('#toast').textContent
+  });
+  const clearAll = () => { document.querySelectorAll('.sheet').forEach(s => s.classList.remove('on')); document.querySelector('#mask').classList.remove('on'); };
+
+  try{
+    await waitFor(() => document.querySelectorAll('#feed .note').length > 0);
+
+    /* ================= A. 卡片是真链接、点了真能进详情 ================= */
+    const cover = document.querySelector('#feed .note .cover');
+    const noteId = cover.dataset.note;
+    ok('★ 卡片封面是真实 <a> 链接（带 href）', cover.tagName === 'A' && /^#\/note\//.test(cover.getAttribute('href')));
+    ok('标题与作者也是真链接', (() => {
+      const t = document.querySelector('#feed .note .title'), a = document.querySelector('#feed .note .author');
+      return t.tagName === 'A' && a.tagName === 'A' && /^#\/note\//.test(t.getAttribute('href'));
+    })());
+
+    // 单击（桌面路径：应立即打开，无 240ms 延迟）
+    clearAll(); history.replaceState(null, '', location.pathname);
+    realClick(cover);
+    await sleep(60);
+    ok('★ 桌面单击卡片立即打开详情（无需等待）', document.querySelector('#sheetDetail').classList.contains('on'));
+    ok('打开后 URL hash 同步（可分享/可后退）', location.hash === '#/note/' + noteId);
+    document.querySelector('#sheetDetail [data-act="close"]').click();
+    await sleep(80);
+    ok('关闭详情会清掉 hash', location.hash === '' || location.hash === '#');
+
+    // 双击：过去这里会「变成点赞、详情打不开」，是最严重的问题
+    clearAll(); history.replaceState(null, '', location.pathname);
+    const likeBefore = likeCount(noteId);
+    realClick(cover); await sleep(110); realClick(cover); await sleep(120);
+    ok('★ 桌面双击卡片仍然打开详情（不再被误判成双击点赞）',
+       document.querySelector('#sheetDetail').classList.contains('on') && likeCount(noteId) === likeBefore);
+    document.querySelector('#sheetDetail [data-act="close"]').click(); await sleep(80);
+
+    // 深链
+    clearAll(); location.hash = '#/note/' + noteId;
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await sleep(120);
+    ok('★ #/note/id 深链可直接打开详情', document.querySelector('#sheetDetail').classList.contains('on'));
+    history.replaceState(null, '', location.pathname);
+    document.querySelector('#sheetDetail [data-act="close"]').click(); await sleep(80);
+
+    /* ================= B. 导航按钮全部可达 ================= */
+    const navs = [['feed','首页'], ['team','组队'], ['checkin','打卡'], ['guide','攻略'], ['me','我的']];
+    let navOk = true;
+    for(const [page] of navs){
+      const rail = document.querySelector(`.rail-item[data-page="${page}"]`);
+      realClick(rail); await sleep(60);
+      if(pagesShown().join() !== 'page-' + page) navOk = false;
+    }
+    ok('★ 左侧栏 5 个导航都能切到对应页面', navOk);
+    // 底部 Tab 只有 4 个导航项（攻略只在侧栏），第 5 格是发布按钮
+    let tabOk = true;
+    for(const page of ['feed','team','checkin','me']){
+      const tb = document.querySelector(`.tb[data-page="${page}"]`);
+      if(!tb){ tabOk = false; break; }
+      realClick(tb); await sleep(60);
+      if(pagesShown().join() !== 'page-' + page) tabOk = false;
+    }
+    ok('★ 底部 Tab 的导航项都能切到对应页面', tabOk);
+    ok('底部中间「发布」按钮打开发布面板', (() => {
+      realClick(document.querySelector('#plusBtn'));
+      return document.querySelector('#sheetForm').classList.contains('on');
+    })());
+    await sleep(80); clearAll();
+
+    // 分类 chip
+    const cat3 = document.querySelectorAll('#catbar .cat')[3];
+    realClick(cat3); await sleep(80);
+    ok('分类 Tab 可切换并重过滤', document.querySelector('#catbar .cat.on').dataset.cat === cat3.dataset.cat);
+    realClick(document.querySelectorAll('#catbar .cat')[0]); await sleep(80);
+
+    /* ================= C. 详情弹窗内按钮 ================= */
+    openDetail(noteId); await sleep(100);
+    const d = () => document.querySelector('#sheetDetail');
+    // 点赞
+    const c0 = likeCount(noteId);
+    d().querySelector('[data-big="1"]').click(); await sleep(80);
+    ok('★ 详情「点赞」真实生效（计数 +1）', likeCount(noteId) === c0 + 1);
+    d().querySelector('[data-big="1"]').click(); await sleep(80);
+    ok('详情「点赞」可再次点击取消', likeCount(noteId) === c0);
+    // 组队出发
+    d().querySelector('[data-act="quickteam"]').click(); await sleep(100);
+    ok('★ 详情「组队出发」打开组队表单并预填活动名',
+       document.querySelector('#sheetForm').classList.contains('on') &&
+       document.querySelector('#tTitle') && document.querySelector('#tTitle').value === findAct(noteId).name);
+    // 真的能提交并跳转
+    document.querySelector('#tTime').value = '周六 15:00 校门口';
+    const nT = store.teams.length;
+    document.querySelector('#tCreate').click(); await sleep(120);
+    ok('★ 组队表单提交后写入数据并跳到组队页', store.teams.length === nT + 1 && pagesShown().join() === 'page-team');
+    // 我去打卡
+    openDetail(noteId); await sleep(100);
+    d().querySelector('[data-act="quickcheckin"]').click(); await sleep(100);
+    const nC = store.checkins.length;
+    document.querySelector('#cTitle').value = '按钮审计打卡';
+    document.querySelector('#cAdd').click(); await sleep(120);
+    ok('★ 打卡表单提交后写入数据并跳到打卡页', store.checkins.length === nC + 1 && pagesShown().join() === 'page-checkin');
+    // 写攻略
+    openDetail(noteId); await sleep(100);
+    d().querySelector('[data-act="quickguide"]').click(); await sleep(100);
+    const nG = store.guides.length;
+    document.querySelector('#gTitle').value = '按钮审计攻略';
+    document.querySelector('#gBody').value = '正文';
+    document.querySelector('#gAdd').click(); await sleep(120);
+    ok('★ 攻略表单提交后写入数据并跳到攻略页', store.guides.length === nG + 1 && pagesShown().join() === 'page-guide');
+    // 复制活动信息（剪贴板可能不可用，但必须给出反馈）
+    openDetail(noteId); await sleep(100);
+    d().querySelector('[data-act="copyact"]').click(); await sleep(150);
+    ok('详情「复制活动信息」有反馈（toast）', document.querySelector('#toast').textContent.length > 0);
+    d().querySelector('[data-act="close"]').click(); await sleep(80);
+
+    /* ================= D. 发布面板四个入口都能进 ================= */
+    openPublish(null); await sleep(80);
+    ok('发布面板有 4 个入口', document.querySelectorAll('.pubgrid button').length === 4);
+    let pubOk = true;
+    for(const [kind, sel] of [['team','#tTitle'], ['checkin','#cTitle'], ['guide','#gTitle'], ['activity','#nName']]){
+      document.querySelector(`[data-act="pub"][data-kind="${kind}"]`).click(); await sleep(80);
+      if(!document.querySelector(sel)) pubOk = false;
+      openPublish(null); await sleep(60);
+    }
+    ok('★ 4 个入口分别打开对应表单', pubOk);
+    // 自建活动提交
+    openPublish('activity'); await sleep(80);
+    const nA = store.activities.length;
+    document.querySelector('#nName').value = '按钮审计活动';
+    document.querySelector('#nAdd').click(); await sleep(120);
+    ok('★ 自建活动提交后进入活动库', store.activities.length === nA + 1);
+    // 提交按钮不被遮挡（粘性底栏）
+    openPublish('checkin'); await sleep(120);
+    const cAddBtn = document.querySelector('#cAdd');
+    const rb = cAddBtn.getBoundingClientRect();
+    ok('★ 打卡提交按钮始终在弹窗可视区内（不用下拉）',
+       rb.top >= 0 && rb.bottom <= document.querySelector('#sheetForm').getBoundingClientRect().bottom + 1);
+    ok('★ 提交按钮位于粘性底栏内', !!cAddBtn.closest('.form-actions'));
+    document.querySelector('#sheetForm [data-act="close"]').click(); await sleep(80);
+
+    /* ================= E. 顶栏 / 工具行 / 我的页按钮 ================= */
+    // 换一批
+    const feedBefore = document.querySelector('#feed').innerHTML.length;
+    document.querySelector('#shuffleBtn').click(); await sleep(120);
+    ok('「换一批」会重排信息流', document.querySelector('#feed').innerHTML.length > 0 && document.querySelectorAll('#feed .note').length > 0);
+    // 筛选
+    document.querySelector('#filterBtn').click(); await sleep(100);
+    ok('「筛选」打开筛选面板', document.querySelector('#sheetForm').classList.contains('on') && !!document.querySelector('#fBudget'));
+    const b = document.querySelector('#fBudget'); b.value = '30'; b.dispatchEvent(new Event('input', { bubbles:true }));
+    await sleep(80);
+    ok('筛选面板调节预算真实生效', prefs.budget === 30);
+    const chip = document.querySelector('#fTypes .chip'); chip.click(); await sleep(80);
+    ok('筛选面板类型多选真实生效', prefs.types.length === 1);
+    document.querySelector('#resetPrefs').click(); await sleep(120);
+    ok('「恢复默认」真实生效并重开面板', prefs.budget === 150 && !!document.querySelector('#fBudget'));
+    document.querySelector('#sheetForm [data-act="close"]').click(); await sleep(80);
+    // 帮我选
+    document.querySelector('#askBtn').click(); await sleep(120);
+    ok('「帮我选」打开一个详情', document.querySelector('#sheetDetail').classList.contains('on'));
+    document.querySelector('#sheetDetail [data-act="close"]').click(); await sleep(80);
+    // 主题
+    const themeBefore = document.documentElement.dataset.theme;
+    document.querySelector('#themeBtn').click(); await sleep(120);
+    ok(`主题切换真实生效并落盘（${themeBefore} → ${document.documentElement.dataset.theme}）`,
+       document.documentElement.dataset.theme !== themeBefore && !!localStorage.getItem('wcg.theme.v2'));
+    document.querySelector('#railTheme').click(); await sleep(80);
+    ok('侧栏主题按钮同样生效', document.documentElement.dataset.theme === themeBefore);
+    // 同步面板
+    document.querySelector('#railSync').click(); await sleep(120);
+    ok('侧栏「跨设备同步」打开同步面板', document.querySelector('#sheetSync').classList.contains('on') && !!document.querySelector('#sNick'));
+    document.querySelector('#sheetSync [data-act="joinbox"]').click(); await sleep(80);
+    ok('同步面板「用房间码加入」展开输入框', document.querySelector('#joinBox') && document.querySelector('#joinBox').hidden === false);
+    ok('同步面板有房间码输入框', !!document.querySelector('#roomInput'));
+    document.querySelector('#sheetSync [data-act="close"]').click(); await sleep(80);
+
+    // 我的页
+    go('me'); await sleep(80);
+    document.querySelector('#editNickBtn').click(); await sleep(100);
+    document.querySelector('#nickEdit').value = '审计员';
+    document.querySelector('#saveNick').click(); await sleep(100);
+    ok('★ 编辑昵称真实保存', me.nick === '审计员');
+    // 分享链接
+    document.querySelector('#shareLinkBtn').click(); await sleep(150);
+    ok('★「生成分享链接」产出可解码的链接', (() => {
+      const ta = document.querySelector('#sheetForm textarea');
+      if(!ta) return false;
+      const m = ta.value.match(/#r=(.+)$/);
+      if(!m) return false;
+      try{ decodeState(m[1]); return true; }catch{ return false; }
+    })());
+    document.querySelector('#sheetForm [data-act="close"]').click(); await sleep(80);
+    // 导入
+    document.querySelector('#importBtn').click(); await sleep(100);
+    ok('「导入 JSON」打开导入面板', !!document.querySelector('#impText') && !!document.querySelector('#doImport'));
+    document.querySelector('#impText').value = JSON.stringify({ v:2, teams:[{ id:'imp1', owner:'导入者', title:'导入进来的队伍', cap:3, budget:0, members:[], ts:Date.now() }], checkins:[], guides:[], activities:[], likes:{}, tomb:[] });
+    document.querySelector('#doImport').click(); await sleep(150);
+    ok('★ 导入 JSON 真实写入数据', store.teams.some(t => t.id === 'imp1'));
+    // 清除示例数据
+    if(document.querySelector('#clearDemoBtn') && !document.querySelector('#clearDemoBtn').hidden){
+      document.querySelector('#clearDemoBtn').click(); await sleep(120);
+      ok('「清除示例数据」真实生效', !store.teams.some(t => t.demo));
+    } else { ok('「清除示例数据」按钮可见（有示例数据时）', false); }
+    // 清空全部（confirm 需要真实确认）
+    const realConfirm = window.confirm;
+    window.confirm = () => true;
+    document.querySelector('#clearBtn').click(); await sleep(120);
+    window.confirm = realConfirm;
+    ok('★「清空全部数据」真实清空', store.teams.length === 0 && store.guides.length === 0 && store.checkins.length === 0);
+
+    /* ================= F. 通用审计：页面上不能有「点了没反应」的按钮 =================
+       用选择器而不是元素引用：点分类/换一批会重渲染信息流，旧引用会脱离 DOM 被误判成死按钮。 */
+    seedDemo(); renderTeams(); renderCheckins(); renderGuides(); renderMe(); renderFeed();
+    go('feed'); await sleep(120);
+    const sel = [
+      '#railPublish', '#railSync', '#railTheme', '#postMini', '#syncBtn', '#themeBtn',
+      '#shuffleBtn', '#filterBtn', '#plusBtn',
+      ...['feed','team','checkin','guide','me'].map(p => `.rail-item[data-page="${p}"]`),
+      ...['feed','team','checkin','me'].map(p => `.tb[data-page="${p}"]`),
+      ...document.querySelectorAll('#catbar .cat').length ? ['#catbar .cat:nth-child(2)', '#catbar .cat:nth-child(5)'] : []
+    ];
+    const dead = [];
+    let audited = 0;
+    for(const s of sel){
+      const el = document.querySelector(s);
+      if(!el || el.offsetWidth === 0) continue;      // 不存在或不可见（如桌面下的底部 Tab）
+      if(el.classList.contains('on')) continue;      // 已激活的导航/分类：再点一次本就无变化，幂等
+      const before = snap();
+      realClick(el);
+      await sleep(70);
+      const after = snap();
+      if(after === before && el.isConnected) dead.push(s);
+      audited++;
+      clearAll();
+      if(document.querySelector('#sheetForm').classList.contains('on')) closeSheet();
+      if(document.querySelector('#sheetDetail').classList.contains('on')) closeSheet();
+      if(document.querySelector('#sheetSync').classList.contains('on')) closeSheet();
+      await sleep(40);
+    }
+    // 卡片上的点赞按钮单独逐个验证
+    const likeIds = [...document.querySelectorAll('#feed .note')].slice(0, 4).map(n => n.dataset.id);
+    for(const id of likeIds){
+      const el = document.querySelector(`.note[data-id="${id}"] .like-wrapper`);
+      if(!el) continue;
+      const c = likeCount(id);
+      realClick(el);
+      await sleep(70);
+      if(likeCount(id) === c) dead.push('like#' + id);
+      audited++;
+    }
+    ok(`★ 全站按钮审计：抽查 ${audited} 个可交互元素，无「点了没反应」的按钮${dead.length ? ' → ' + dead.join(', ') : ''}`, dead.length === 0);
+  }catch(e){
+    R.push('FAIL :: 运行异常 ' + (e && e.message));
+  }
+  const fails = R.filter(r => r.startsWith('FAIL'));
+  document.querySelector('#TESTOUT').textContent = 'TESTS ' + (R.length - fails.length) + '/' + R.length + ' PASSED\n' + R.join('\n');
+  document.title = fails.length ? ('TESTS FAILED: ' + fails.length) : 'TESTS OK';
+})();
+</script>

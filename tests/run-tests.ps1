@@ -65,13 +65,14 @@ function Invoke-Suite {
 
 $exit = 0
 
-Write-Host "`n===== 1/4 颜色审计（禁用蓝紫） =====" -ForegroundColor Cyan
+Write-Host "`n===== 1/5 颜色审计（禁用蓝紫） =====" -ForegroundColor Cyan
 node (Join-Path $PSScriptRoot 'color-audit.js')
 if ($LASTEXITCODE -ne 0) { $exit = 1 }
 
-$exit += Invoke-Suite -Title '2/4 行为测试'              -Snippet 'behavior.snippet.html' -BudgetMs 20000
-$exit += Invoke-Suite -Title '3/4 布局与移动端适配'       -Snippet 'layout.snippet.html'   -BudgetMs 40000
-$exit += Invoke-Suite -Title '4/4 跨设备同步（真实网络）' -Snippet 'sync.snippet.html'     -BudgetMs 30000
+$exit += Invoke-Suite -Title '2/5 行为测试'               -Snippet 'behavior.snippet.html' -BudgetMs 20000
+$exit += Invoke-Suite -Title '3/5 按钮真实性与跳转审计'    -Snippet 'buttons.snippet.html'  -BudgetMs 45000
+$exit += Invoke-Suite -Title '4/5 布局与移动端适配'        -Snippet 'layout.snippet.html'   -BudgetMs 40000
+$exit += Invoke-Suite -Title '5/5 跨设备同步（真实网络）'  -Snippet 'sync.snippet.html'     -BudgetMs 30000
 
 if ($exit -eq 0) { Write-Host "`n全部通过 ✅" -ForegroundColor Green } else { Write-Host "`n存在失败项 ❌" -ForegroundColor Red }
 exit $exit

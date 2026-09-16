@@ -75,22 +75,27 @@
     document.querySelector('#feed .note .like-wrapper').click();
     ok('再次点击取消赞', likeCount(actId) === c0);
 
-    /* 双击封面点赞 */
-    const wrap2 = document.querySelector('#feed .note .cover');
-    const id2 = wrap2.dataset.id;
-    const c2 = likeCount(id2);
-    tap(wrap2); tap(wrap2);
-    await sleep(150);
-    ok('双击封面点赞生效', likeCount(id2) === c2 + 1);
+    /* 卡片点击：桌面路径是「真链接 + 立即打开」，不再有 240ms 延迟与双击点赞劫持 */
+    const coverEl = document.querySelector('#feed .note .cover');
+    const id2 = coverEl.dataset.note;
+    ok('封面是真链接', coverEl.tagName === 'A' && /^#\/note\//.test(coverEl.getAttribute('href')));
 
-    /* 单击封面打开详情 */
-    const wrap3 = document.querySelector('#feed .note .cover');
-    tap(wrap3);
-    await sleep(430);
-    ok('单击封面打开详情弹层', document.querySelector('#sheetDetail').classList.contains('on'));
+    const c2 = likeCount(id2);
+    coverEl.click();
+    await sleep(120);
+    ok('单击封面立即打开详情弹层', document.querySelector('#sheetDetail').classList.contains('on'));
     ok('详情含匹配度与组队按钮', /匹配/.test(document.querySelector('#sheetDetail').textContent) &&
         !!document.querySelector('#sheetDetail [data-act="quickteam"]'));
     document.querySelector('#sheetDetail [data-act="close"]')?.click();
+    await sleep(80);
+
+    // 回归守住：以前桌面双击会变成点赞、详情打不开
+    const c3 = likeCount(id2);
+    coverEl.click(); await sleep(90); document.querySelector('#feed .note .cover').click(); await sleep(120);
+    ok('★ 双击卡片不会变成点赞（详情照常打开）',
+       document.querySelector('#sheetDetail').classList.contains('on') && likeCount(id2) === c3);
+    document.querySelector('#sheetDetail [data-act="close"]')?.click();
+    await sleep(80);
 
     /* ---------- E. 发布流程 ---------- */
     document.querySelector('#plusBtn').click();
