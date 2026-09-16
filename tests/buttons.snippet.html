@@ -70,23 +70,41 @@
     document.querySelector('#sheetDetail [data-act="close"]').click(); await sleep(80);
 
     /* ================= B. 导航按钮全部可达 ================= */
-    const navs = [['feed','首页'], ['team','组队'], ['checkin','打卡'], ['guide','攻略'], ['me','我的']];
+    const navs = [['feed','首页'], ['calendar','光阴'], ['team','组队'], ['checkin','打卡'], ['guide','攻略'], ['me','我的'], ['about','关于']];
     let navOk = true;
     for(const [page] of navs){
       const rail = document.querySelector(`.rail-item[data-page="${page}"]`);
       realClick(rail); await sleep(60);
       if(pagesShown().join() !== 'page-' + page) navOk = false;
     }
-    ok('★ 左侧栏 5 个导航都能切到对应页面', navOk);
-    // 底部 Tab 只有 4 个导航项（攻略只在侧栏），第 5 格是发布按钮
+    ok('★ 左侧栏 7 个导航（含光阴/关于）都能切到对应页面', navOk);
+    // 底部 Tab 只放 5 个导航：光阴 / 关于 在移动端收进「我的 → 更多」，
+    // 因为底部只有 5 格，再塞第 6、7 个横向就太挤了。
+    const tbs = [...document.querySelectorAll('.tabbar .tb')];
+    ok('★ 底部 Tab 恰好 5 个导航项', tbs.length === 5);
+    ok('底部 Tab 里没有「光阴」「关于」', !document.querySelector('.tb[data-page="calendar"]') && !document.querySelector('.tb[data-page="about"]'));
     let tabOk = true;
-    for(const page of ['feed','team','checkin','me']){
+    for(const page of ['feed','team','checkin','guide','me']){
       const tb = document.querySelector(`.tb[data-page="${page}"]`);
       if(!tb){ tabOk = false; break; }
       realClick(tb); await sleep(60);
       if(pagesShown().join() !== 'page-' + page) tabOk = false;
     }
-    ok('★ 底部 Tab 的导航项都能切到对应页面', tabOk);
+    ok('★ 底部 Tab 5 项都能切到对应页面', tabOk);
+
+    // 「我的 → 更多」：光阴 / 关于 的移动端入口
+    go('me'); await sleep(150);
+    const moreRows = [...document.querySelectorAll('#meMore .mrow')];
+    ok('★ 我的页有「更多」分组，含光阴与关于', moreRows.length === 2 &&
+        !!document.querySelector('#meMore .mrow[data-page="calendar"]') &&
+        !!document.querySelector('#meMore .mrow[data-page="about"]'));
+    ok('「更多」分组里每一项都有说明文字', moreRows.every(r => (r.querySelector('.ts') || {}).textContent?.trim().length > 0));
+    realClick(document.querySelector('#meMore .mrow[data-page="calendar"]')); await sleep(150);
+    ok('★ 我的页「光阴」入口真能进日历页', pagesShown().join() === 'page-calendar');
+    go('me'); await sleep(120);
+    realClick(document.querySelector('#meMore .mrow[data-page="about"]')); await sleep(150);
+    ok('★ 我的页「关于」入口真能进关于页', pagesShown().join() === 'page-about');
+    go('feed'); await sleep(120);
     ok('底部中间「发布」按钮打开发布面板', (() => {
       realClick(document.querySelector('#plusBtn'));
       return document.querySelector('#sheetForm').classList.contains('on');
@@ -226,22 +244,190 @@
       document.querySelector('#clearDemoBtn').click(); await sleep(120);
       ok('「清除示例数据」真实生效', !store.teams.some(t => t.demo));
     } else { ok('「清除示例数据」按钮可见（有示例数据时）', false); }
-    // 清空全部（confirm 需要真实确认）
-    const realConfirm = window.confirm;
-    window.confirm = () => true;
-    document.querySelector('#clearBtn').click(); await sleep(120);
-    window.confirm = realConfirm;
-    ok('★「清空全部数据」真实清空', store.teams.length === 0 && store.guides.length === 0 && store.checkins.length === 0);
 
-    /* ================= F. 通用审计：页面上不能有「点了没反应」的按钮 =================
+    /* ================= G. 本轮新增功能与修复项 ================= */
+    // 前面的用例把示例数据清空了，这里补最少量的数据，保证依赖内容的用例有东西可测
+    const ensureData = () => {
+      // 注意判据是「有没有带标签的攻略」：可能已有攻略但都不带标签
+      if(!store.guides.some(g => (g.tags || []).length))
+        store.guides.unshift({ id:'tg' + Date.now(), title:'测试攻略', body:'正文', author:myNick(), date:ymd(new Date()), likedBy:[], tags:['免费','步行'], ts:Date.now() });
+      if(!store.teams.length) store.teams.unshift({ id:'tt1', owner:'阿哲', title:'测试队伍', time:'周六 14:00', cap:4, budget:50, members:['阿哲'], ts:Date.now() });
+      if(!store.checkins.length) store.checkins.unshift({ id:'tc1', owner:myNick(), title:'测试打卡', date:ymd(new Date()), cost:20, hours:2, mood:'🤩', note:'', ts:Date.now() });
+      persistStore(); renderAll();
+    };
+    ensureData(); go('feed'); await sleep(180);
+
+    // 1) 卡片整块可点：用 elementFromPoint 做真实命中测试
+    //    （合成事件不经过浏览器命中测试，直接 dispatch 到 .footer 是不准的）
+    const noteEl = document.querySelector('#feed .note');
+    clearAll(); history.replaceState(null, '', location.pathname);
+    const titleEl = noteEl.querySelector('.title');
+    titleEl.scrollIntoView({ block:'center' });          // 先把标题滚进视口，否则取点在视口外
+    await sleep(200);
+    const afterStyle = getComputedStyle(titleEl, '::after');
+    ok('★ 卡片整块可点（标题链接 ::after 铺满整卡）',
+       afterStyle.position === 'absolute' && parseFloat(afterStyle.top) === 0);
+    const cr = noteEl.getBoundingClientRect(), tr = titleEl.getBoundingClientRect();
+    const vh = document.documentElement.clientHeight;
+    const cands = [[cr.right - 6, tr.top + 6], [tr.left + 4, tr.top - 5], [cr.right - 6, tr.bottom + 8]];
+    let hitEl = null;
+    for(const [x, y] of cands){
+      if(y < 4 || y > vh - 4) continue;                  // 视口外的点 elementFromPoint 返回 null
+      const e2 = document.elementFromPoint(x, y);
+      if(e2 && e2.closest('[data-note]')){ hitEl = e2.closest('[data-note]'); break; }
+    }
+    ok('★ 卡片空白处命中的是卡片链接（整卡可点）', !!hitEl);
+    if(hitEl){ realClick(hitEl); await sleep(150); }
+    ok('★ 点卡片空白处也能打开详情', document.querySelector('#sheetDetail').classList.contains('on'));
+    closeSheet(); history.replaceState(null, '', location.pathname); await sleep(80);
+
+    // 1b) 逐张验证：不能只有第一张能点，任何一张都得能打开详情
+    closeSheet(); go('feed'); await sleep(200);
+    const allCardIds = [...document.querySelectorAll('#feed .note')].map(n => n.dataset.id);
+    const badCards = [];
+    for(const id of allCardIds){
+      closeSheet(); history.replaceState(null, '', location.pathname);
+      const el = document.querySelector(`#feed .note[data-id="${id}"] .cover`);
+      if(!el){ badCards.push(id + '(缺失)'); continue; }
+      realClick(el);
+      await sleep(70);
+      if(!document.querySelector('#sheetDetail').classList.contains('on')) badCards.push(id);
+    }
+    ok(`★ 全部 ${allCardIds.length} 张推荐卡片都能点开详情${badCards.length ? ' → 失败：' + badCards.join(', ') : ''}`,
+       allCardIds.length > 0 && badCards.length === 0);
+    // 逐张验证点赞按钮也没被卡片整块点击区盖住
+    const badLikes = [];
+    for(const id of allCardIds.slice(0, 6)){
+      const el = document.querySelector(`#feed .note[data-id="${id}"] .like-wrapper`);
+      if(!el){ badLikes.push(id + '(缺失)'); continue; }
+      const c = likeCount(id);
+      realClick(el); await sleep(60);
+      if(likeCount(id) === c) badLikes.push(id);
+    }
+    ok(`★ 卡片点赞按钮未被整卡点击区遮挡${badLikes.length ? ' → 失败：' + badLikes.join(', ') : ''}`, badLikes.length === 0);
+    closeSheet(); history.replaceState(null, '', location.pathname); await sleep(60);
+
+    // 2) 攻略页标签 chip 不再是死按钮
+    go('guide'); await sleep(150);
+    const tagChip = document.querySelector('#guideList .chip[data-tag]');
+    ok('攻略标签是可点的筛选入口', !!tagChip && !!tagChip.dataset.tag);
+    if(tagChip){
+      realClick(tagChip); await sleep(160);
+      ok('★ 点攻略标签会跳首页并按标签筛选',
+         pagesShown().join() === 'page-feed' && document.querySelector('#q').value === tagChip.dataset.tag);
+      document.querySelector('#q').value = ''; document.querySelector('#q').dispatchEvent(new Event('input', { bubbles:true }));
+      await sleep(120);
+    } else { ok('★ 点攻略标签会跳首页并按标签筛选', false); }
+
+    // 3) 复制按钮即时反馈
+    go('guide'); await sleep(150);
+    document.querySelector('#toast').textContent = '';
+    const copyBtn = document.querySelector('#guideList [data-act="copyg"]');
+    ok('攻略复制按钮存在', !!copyBtn);
+    if(copyBtn){
+      realClick(copyBtn);
+      await sleep(40);
+      ok('★ 点「复制」立即有反馈（不再等剪贴板返回）', document.querySelector('#toast').textContent.length > 0);
+    } else { ok('★ 点「复制」立即有反馈（不再等剪贴板返回）', false); }
+
+    // 4) 导入支持选择文件
+    go('me'); await sleep(150);
+    document.querySelector('#importBtn').click(); await sleep(140);
+    ok('★ 导入面板支持选择 JSON 文件', !!document.querySelector('#impFile') && document.querySelector('#impFile').type === 'file');
+    closeSheet(); await sleep(80);
+
+    // 5) 清空＝两步确认 + 写墓碑
+    go('me'); await sleep(150);
+    const beforeClear = store.teams.length;
+    const clearBtn = document.querySelector('#clearBtn');
+    realClick(clearBtn); await sleep(90);
+    ok('第一次点击只是「待确认」，不会立刻清空', clearBtn.dataset.armed === '1' && store.teams.length === beforeClear);
+    ok('按钮文案提示再点一次', /再点一次/.test(clearBtn.textContent));
+    realClick(clearBtn); await sleep(150);
+    ok('★ 第二次点击真正清空', store.teams.length === 0 && store.checkins.length === 0 && store.guides.length === 0);
+    ok('★ 清空写入墓碑（云端不会把数据合并回来）', (store.tomb || []).length > 0);
+
+    // 6) 我的页统计可点击跳转
+    seedDemo(); renderAll(); go('me'); await sleep(180);
+    const statBtns = [...document.querySelectorAll('#meStats .stat')];
+    ok('我的数据 4 项都可点击', statBtns.length === 4 && statBtns.every(b => b.dataset.page || b.dataset.jump));
+    realClick(document.querySelector('#meStats .stat[data-page="team"]')); await sleep(140);
+    ok('★ 点「我发起的队」跳到组队页', pagesShown().join() === 'page-team');
+    go('me'); await sleep(120);
+    realClick(document.querySelector('#meStats .stat[data-page="checkin"]')); await sleep(140);
+    ok('★ 点「打卡」跳到打卡页', pagesShown().join() === 'page-checkin');
+    go('me'); await sleep(120);
+    realClick(document.querySelector('#meStats .stat[data-page="guide"]')); await sleep(140);
+    ok('★ 点「攻略」跳到攻略页', pagesShown().join() === 'page-guide');
+
+    // 7) 非首页不显示分类导航条
+    ok('★ 非首页不显示顶部分类导航条', document.querySelector('.catbar').hidden === true);
+    go('feed'); await sleep(120);
+    ok('回到首页重新显示分类导航条', document.querySelector('.catbar').hidden === false);
+
+    // 8) 光阴日历
+    go('calendar'); await sleep(250);
+    ok('★ 光阴页渲染出日历', !!document.querySelector('#calGrid') && document.querySelectorAll('#calGrid .cal-day').length >= 28);
+    ok('日历标出了周末', document.querySelectorAll('#calGrid .cal-day.wk').length >= 4);
+    ok('日历里有法定假期标记', document.querySelectorAll('#calGrid .cal-day.hol').length + document.querySelectorAll('#calGrid .cal-day.work').length >= 0);
+    ok('日历高亮今天（仅一个）', document.querySelectorAll('#calGrid .cal-day.today').length === 1);
+    ok('★ 有出行提醒（假期倒计时/调休/周末天气）', document.querySelectorAll('#calAlerts .cal-alert').length >= 2);
+    ok('★ 列出 2026 年放假安排 7 条', document.querySelectorAll('#holidayList .row-card').length === 7);
+    const calTitle0 = document.querySelector('#calTitle').textContent;
+    realClick(document.querySelector('#calNext')); await sleep(140);
+    ok('★ 日历可切到下个月', document.querySelector('#calTitle').textContent !== calTitle0);
+    realClick(document.querySelector('#calToday')); await sleep(140);
+    ok('★「回到今天」可用', document.querySelector('#calTitle').textContent === calTitle0);
+    // 光阴/关于 不再是底部 Tab，停在这两页时底部应高亮「我的」（它们是我的的子页）
+    ok('★ 光阴页时底部高亮「我的」而不是全灭', (() => {
+      const meTab = document.querySelector('.tb[data-page="me"]');
+      return meTab.classList.contains('on') && !document.querySelector('.tb[data-page="feed"]').classList.contains('on');
+    })());
+    ok('★ 光阴页时侧栏高亮的是「光阴」本身', document.querySelector('.rail-item[data-page="calendar"]').classList.contains('on') &&
+        document.querySelectorAll('.rail-item.on').length === 1);
+    go('about'); await sleep(150);
+    ok('★ 关于页时底部同样高亮「我的」', document.querySelector('.tb[data-page="me"]').classList.contains('on'));
+    go('feed'); await sleep(120);
+
+    // 9) 关于页 = README 内容
+    go('about'); await sleep(180);
+    const about = document.querySelector('#page-about');
+    ok('★ 关于页写入了 README 内容', about.textContent.includes('技术栈') && about.textContent.includes('已知限制') && about.textContent.includes('质量验证'));
+    ok('关于页标明数据来源', about.textContent.includes('Open-Meteo') && about.textContent.includes('textdb.dev') && about.textContent.includes('国办发明电'));
+    ok('★ 侧栏已去掉 logo 与版本页脚', !document.querySelector('.rail-logo') && !document.querySelector('.rail-foot'));
+    ok('★ 侧栏「关于」与首页/打卡同在一组（在区隔线之前）', (() => {
+      const items = [...document.querySelectorAll('.rail-nav > *')];
+      const sep = items.findIndex(e => e.classList.contains('rail-sep'));
+      const home = items.findIndex(e => e.dataset.page === 'feed');
+      const about = items.findIndex(e => e.dataset.page === 'about');
+      return sep > 0 && home >= 0 && about > home && about < sep;
+    })());
+    ok('★ 侧栏导航整体垂直居中（不靠上对齐）', (() => {
+      const rail = document.querySelector('.rail'), nav = document.querySelector('.rail-nav');
+      const cs = getComputedStyle(rail);
+      if(cs.justifyContent !== 'center') return false;        // CSS 层面任何视口都能断言
+      const r = rail.getBoundingClientRect(), n = nav.getBoundingClientRect();
+      if(!r.height || !n.height) return true;                 // 窄屏侧栏隐藏，几何量不到（1280px 由布局套件验证）
+      return Math.abs((r.top + r.height / 2) - (n.top + n.height / 2)) < 6;
+    })());
+
+    // 10) 天气条同时给出周六与周日 + 倒计时
+    go('feed'); await sleep(200);
+    const wb = document.querySelector('#weatherBar');
+    ok('★ 天气条同时显示周六与周日', wb.querySelectorAll('.wday').length === 2 &&
+        /周六/.test(wb.textContent) && /周日/.test(wb.textContent));
+    ok('★ 天气条给出距周末/假期倒计时', /距离周末/.test(wb.textContent) && /假期|中秋|国庆|元旦/.test(wb.textContent));
+
+    /* ================= H. 通用审计：页面上不能有「点了没反应」的按钮 =================
        用选择器而不是元素引用：点分类/换一批会重渲染信息流，旧引用会脱离 DOM 被误判成死按钮。 */
     seedDemo(); renderTeams(); renderCheckins(); renderGuides(); renderMe(); renderFeed();
     go('feed'); await sleep(120);
     const sel = [
       '#railPublish', '#railSync', '#railTheme', '#postMini', '#syncBtn', '#themeBtn',
       '#shuffleBtn', '#filterBtn', '#plusBtn',
-      ...['feed','team','checkin','guide','me'].map(p => `.rail-item[data-page="${p}"]`),
-      ...['feed','team','checkin','me'].map(p => `.tb[data-page="${p}"]`),
+      ...['feed','calendar','team','checkin','guide','me','about'].map(p => `.rail-item[data-page="${p}"]`),
+      ...['feed','team','checkin','guide','me'].map(p => `.tb[data-page="${p}"]`),
+      '#meMore .mrow[data-page="calendar"]', '#meMore .mrow[data-page="about"]',
       ...document.querySelectorAll('#catbar .cat').length ? ['#catbar .cat:nth-child(2)', '#catbar .cat:nth-child(5)'] : []
     ];
     const dead = [];

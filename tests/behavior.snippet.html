@@ -1,4 +1,4 @@
-<pre id="TESTOUT" style="display:none"></pre>
+﻿<pre id="TESTOUT" style="display:none"></pre>
 <script>
 (async function(){
   const R = [];
@@ -10,7 +10,9 @@
 
     /* ---------- A. 结构渲染 ---------- */
     ok('分类条渲染 11 项（推荐+10类）', document.querySelectorAll('#catbar .cat').length === 11);
-    ok('底部 Tab 有 5 个（含发布）', document.querySelectorAll('.tabbar .tb').length === 5);
+    ok('底部 Tab 有 5 个导航项（发布移到悬浮按钮，光阴/关于收进「我的」）', document.querySelectorAll('.tabbar .tb').length === 5);
+    ok('底部 Tab 不含光阴/关于（否则第 6、7 格太挤）',
+       !document.querySelector('.tb[data-page="calendar"]') && !document.querySelector('.tb[data-page="about"]'));
     ok('信息流渲染出卡片', document.querySelectorAll('#feed .note').length > 0);
     ok('瀑布流为多列', document.querySelectorAll('#feed .mcol').length >= 2);
     ok('卡片含封面/标题/点赞', !!document.querySelector('#feed .note .cover') &&
@@ -204,9 +206,9 @@
     ok('主题切换并落盘', (th === 'dark' || th === 'light') && localStorage.getItem('wcg.theme.v2') === JSON.stringify(th));
 
     /* ---------- I. 页面切换 ---------- */
-    document.querySelectorAll('.tb')[1].click();
+    document.querySelector('.tb[data-page="team"]').click();
     ok('切换到组队页', document.querySelector('#page-team').hidden === false && document.querySelector('#page-feed').hidden === true);
-    document.querySelectorAll('.tb')[4].click();
+    document.querySelector('.tb[data-page="me"]').click();
     ok('切换到我的页并渲染统计', document.querySelector('#page-me').hidden === false && document.querySelectorAll('#meStats .stat').length === 4);
 
     /* ---------- J. 清除示例数据（只清 demo，不动用户数据） ---------- */

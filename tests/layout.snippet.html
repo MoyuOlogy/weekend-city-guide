@@ -1,4 +1,4 @@
-<pre id="TESTOUT" style="display:none"></pre>
+﻿<pre id="TESTOUT" style="display:none"></pre>
 <script>
 (async function(){
   const R = [];
@@ -66,6 +66,15 @@
       const items = [...md.querySelectorAll('.tabbar .tb')], vw = md.documentElement.clientWidth;
       return items.length === 5 && items.every(e => { const r = e.getBoundingClientRect(); return r.right <= vw + 1 && r.left >= -1; });
     })());
+    ok('★ 375px：「我的」页里能看到「更多」（光阴/关于入口）', (() => {
+      mw.go('me');                                   // #page-me 默认 hidden，量宽度前必须先切过去
+      const box = md.querySelector('#meMore');
+      const rows = [...md.querySelectorAll('#meMore .mrow')];
+      const shown = !!box && mw.getComputedStyle(box).display !== 'none' &&
+        rows.length === 2 && rows.every(r => r.getBoundingClientRect().width > 0);
+      mw.go('feed');
+      return shown;
+    })());
     ok('375px：卡片宽度合理（两列各占约一半）', (() => {
       const cs = [...md.querySelectorAll('#feed .mcol .note')].slice(0, 2).map(e => e.getBoundingClientRect().width);
       const vw = md.documentElement.clientWidth;
@@ -90,9 +99,29 @@
     })());
     ok('1280px：显示器上不出现底部 Tab 的遮挡留白', parseFloat(dw.getComputedStyle(dd.querySelector('.masonry')).paddingBottom) < 60);
     ok('1280px：★ 无横向溢出', noOverflow(dd));
-    ok('1280px：侧栏导航项 ≥5 个且有高亮', (() => {
+    ok('1280px：侧栏导航项 ≥8 个且有高亮', (() => {
       const items = dd.querySelectorAll('.rail-item');
-      return items.length >= 5 && dd.querySelectorAll('.rail-item.on').length === 1;
+      return items.length >= 8 && dd.querySelectorAll('.rail-item.on').length === 1;
+    })());
+    ok('★ 1280px：侧栏导航垂直居中', (() => {
+      const rail = dd.querySelector('.rail'), nav = dd.querySelector('.rail-nav');
+      if(dw.getComputedStyle(rail).justifyContent !== 'center') return false;
+      const r = rail.getBoundingClientRect(), n = nav.getBoundingClientRect();
+      return Math.abs((r.top + r.height / 2) - (n.top + n.height / 2)) < 6;
+    })());
+    ok('★ 1280px：侧栏「关于」在主导航组内（与首页同级）', (() => {
+      const items = [...dd.querySelectorAll('.rail-nav > *')];
+      const sep = items.findIndex(e => e.classList.contains('rail-sep'));
+      const home = items.findIndex(e => e.dataset.page === 'feed');
+      const about = items.findIndex(e => e.dataset.page === 'about');
+      return sep > 0 && home >= 0 && about > home && about < sep;
+    })());
+    ok('★ 1280px：「我的」页不出现移动端的「更多」入口（桌面走左侧栏）', (() => {
+      dw.go('me');
+      const box = dd.querySelector('#meMore');
+      const hidden = !!box && dw.getComputedStyle(box).display === 'none';
+      dw.go('feed');
+      return hidden;
     })());
 
     /* ============ D. 弹窗：位置一律居中，尺寸/布局分端 ============ */

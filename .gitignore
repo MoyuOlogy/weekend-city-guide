@@ -3,3 +3,10 @@
 
 # 小红书参考页面（本地素材，不属于项目产物）
 xiaohongshu.txt
+
+# 测试产物：临时注入页面、抓回来的 dump、套件日志、双端截图
+tests/_logs/
+tests/_shots/
+tests/_tmp-*
+tests/_probe-*
+tests/_shot-*
