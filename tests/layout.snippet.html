@@ -94,17 +94,22 @@
       return items.length >= 5 && dd.querySelectorAll('.rail-item.on').length === 1;
     })());
 
-    /* ============ D. 弹窗定位：桌面居中 / 移动贴底 ============ */
+    /* ============ D. 弹窗：位置一律居中，尺寸/布局分端 ============ */
     document.querySelector('#filterBtn').click();
     await sleep(200);
     const sheetM = document.querySelector('#sheetForm');
-    const rM = sheetM.getBoundingClientRect(), vhM = document.documentElement.clientHeight;
-    ok('窄屏：弹窗吸附底部', Math.abs(rM.bottom - vhM) < 4);
-    ok('窄屏：不超过 88vh，上方仍能看到页面', rM.top >= 20 && rM.height <= vhM * 0.88 + 1);
-    ok('窄屏：顶部圆角 / 底部直角（抽屉样式）', (() => {
+    const rM = sheetM.getBoundingClientRect();
+    const vhM = document.documentElement.clientHeight, vwM = document.documentElement.clientWidth;
+    ok('窄屏：弹窗垂直居中', Math.abs((rM.top + rM.bottom) / 2 - vhM / 2) < 24);
+    ok('窄屏：弹窗水平居中', Math.abs((rM.left + rM.right) / 2 - vwM / 2) < 24);
+    ok('窄屏：★ 不再吸附底部', rM.bottom < vhM - 20);
+    ok('窄屏：四角统一圆角（弹窗而非抽屉）', (() => {
       const cs = getComputedStyle(sheetM);
-      return parseFloat(cs.borderTopLeftRadius) >= 12 && parseFloat(cs.borderBottomLeftRadius) === 0;
+      return parseFloat(cs.borderTopLeftRadius) === parseFloat(cs.borderBottomLeftRadius) &&
+             parseFloat(cs.borderTopLeftRadius) >= 12;
     })());
+    ok('窄屏：两侧留白、不顶边', rM.left >= 8 && rM.right <= vwM - 8);
+    ok('窄屏：高度不超过 84vh', rM.height <= vhM * 0.84 + 1);
     document.querySelector('#sheetForm [data-act="close"]').click();
     await sleep(150);
 
@@ -121,7 +126,9 @@
       return parseFloat(cs.borderTopLeftRadius) === parseFloat(cs.borderBottomLeftRadius) &&
              parseFloat(cs.borderTopLeftRadius) >= 12;
     })());
-    ok('1280px：拖拽把手已隐藏', dw.getComputedStyle(sheetD.querySelector('.grab')).display === 'none');
+    ok('1280px：分端生效 —— 表单弹窗定宽 600px', Math.abs(rD.width - 600) < 2);
+    ok('1280px：分端生效 —— 桌面内距更大', parseFloat(dw.getComputedStyle(dd.querySelector('#sheetForm .sheet-head')).paddingLeft) >= 20);
+    ok('1280px：弹窗内已无拖拽把手（居中弹窗不需要）', sheetD.querySelector('.grab') === null);
     dd.querySelector('#sheetForm [data-act="close"]').click();
     await sleep(150);
 
@@ -130,6 +137,7 @@
     await sleep(250);
     const rd = dd.querySelector('#sheetDetail').getBoundingClientRect();
     ok('1280px：详情弹窗居中', Math.abs((rd.top + rd.bottom) / 2 - vhD / 2) < 24);
+    ok(`1280px：分端生效 —— 详情弹窗加宽到 880px（实测 ${Math.round(rd.width)}）`, Math.abs(rd.width - 880) < 2);
     ok('1280px：★ 详情为左图右文两栏', dw.getComputedStyle(dd.querySelector('#sheetDetail .dwrap')).display === 'flex');
     dw.openSheet(null);
     await sleep(150);
@@ -137,8 +145,10 @@
     const idM = md.querySelector('#feed .note').dataset.id;
     mw.openDetail(idM);
     await sleep(250);
-    const vhM2 = md.documentElement.clientHeight;
-    ok('375px：详情弹窗贴底', Math.abs(md.querySelector('#sheetDetail').getBoundingClientRect().bottom - vhM2) < 4);
+    const rdM = md.querySelector('#sheetDetail').getBoundingClientRect();
+    const vhM2 = md.documentElement.clientHeight, vwM2 = md.documentElement.clientWidth;
+    ok('375px：详情弹窗垂直居中', Math.abs((rdM.top + rdM.bottom) / 2 - vhM2 / 2) < 24);
+    ok(`375px：分端生效 —— 手机铺满宽度（实测 ${Math.round(rdM.width)} / 视口 ${vwM2}）`, Math.abs(rdM.width - (vwM2 - 24)) < 2);
     ok('375px：★ 详情为单列（图片在上）', mw.getComputedStyle(md.querySelector('#sheetDetail .dwrap')).display === 'block');
     mw.openSheet(null);
   }catch(e){

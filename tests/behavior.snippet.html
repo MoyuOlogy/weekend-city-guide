@@ -1,4 +1,4 @@
-﻿<pre id="TESTOUT" style="display:none"></pre>
+<pre id="TESTOUT" style="display:none"></pre>
 <script>
 (async function(){
   const R = [];
@@ -19,6 +19,24 @@
     const scores = Array.from(document.querySelectorAll('#feed .note .badge.tr')).map(e => parseInt(e.textContent));
     ok('匹配度最高的排在第一列第一位', scores.length > 0 && scores[0] === Math.max(...scores));
     ok('天气条渲染出城市', /上海/.test(document.querySelector('#weatherBar').textContent));
+
+    /* ---------- A2. 示例数据：四个页面都不留白 ---------- */
+    ok('★ 首屏灌入示例队伍（≥3）', store.teams.filter(t => t.demo).length >= 3);
+    ok('★ 首屏灌入示例打卡（≥3）', store.checkins.filter(c => c.demo).length >= 3);
+    ok('★ 首屏灌入示例攻略（≥3）', store.guides.filter(g => g.demo).length >= 3);
+    ok('组队页渲染出多张卡片', document.querySelectorAll('#teamList .row-card').length >= 3);
+    ok('示例数据带「示例」角标', /示例/.test(document.querySelector('#teamList').textContent) &&
+        /示例/.test(document.querySelector('#guideList').textContent));
+    ok('★ 我的页统计不是全零', (() => {
+      return [...document.querySelectorAll('#meStats .stat b')].map(e => e.textContent).some(n => n !== '0');
+    })());
+    ok('★ 我的页有收藏数据', document.querySelectorAll('#meFavList .row-card').length >= 3);
+    ok('提供「清除示例数据」入口', (() => {
+      const b = document.querySelector('#clearDemoBtn');
+      return !!b && b.hidden === false;
+    })());
+    ok('桌面下列表分两列（cols-2）', !!document.querySelector('#teamList.cols-2') && !!document.querySelector('#guideList.cols-2'));
+    ok('示例账号昵称已就绪', me.nick.length > 0 && store.checkins.filter(c => c.owner === me.nick).length >= 3);
 
     /* ---------- B. 筛选 / 搜索 ---------- */
     document.querySelectorAll('#catbar .cat')[4].click();     // 第 5 项 = 徒步
@@ -79,13 +97,15 @@
     ok('＋ 打开发布选择面板', document.querySelector('#sheetForm').classList.contains('on') &&
         document.querySelectorAll('.pubgrid button').length === 4);
     me.nick = '测试员'; persistMe();
+    // 首屏会灌入示例数据，所以这里的计数断言都取「发布前 / 发布后」的相对值
+    const nTeams = store.teams.length, nCk = store.checkins.length, nGuides = store.guides.length;
 
     document.querySelector('[data-act="pub"][data-kind="team"]').click();
     document.querySelector('#tTitle').value = '周六桌游局';
     document.querySelector('#tTime').value = '周六 14:00 地铁 B 口';
     document.querySelector('#tCap').value = '3';
     document.querySelector('#tCreate').click();
-    ok('发布组队写入数据', store.teams.length === 1 && store.teams[0].members.includes('测试员'));
+    ok('发布组队写入数据', store.teams.length === nTeams + 1 && store.teams[0].members.includes('测试员'));
     ok('组队页渲染出卡片', /周六桌游局/.test(document.querySelector('#teamList').textContent));
 
     document.querySelector('#plusBtn').click();
@@ -94,7 +114,7 @@
     document.querySelector('#cCost').value = '35';
     document.querySelector('#cHours').value = '2.5';
     document.querySelector('#cAdd').click();
-    ok('打卡写入数据', store.checkins.length === 1);
+    ok('打卡写入数据', store.checkins.length === nCk + 1);
     ok('打卡统计正确', /¥35/.test(document.querySelector('#ckStats').textContent) && /2\.5/.test(document.querySelector('#ckStats').textContent));
 
     document.querySelector('#plusBtn').click();
@@ -103,7 +123,7 @@
     document.querySelector('#gBody').value = '上午市集，下午书店。';
     document.querySelector('#gTags').value = '免费, 步行';
     document.querySelector('#gAdd').click();
-    ok('攻略写入数据且标签解析正确', store.guides.length === 1 && store.guides[0].tags.length === 2);
+    ok('攻略写入数据且标签解析正确', store.guides.length === nGuides + 1 && store.guides[0].tags.length === 2);
     document.querySelector('#guideList [data-act="likeg"]').click();
     ok('攻略点赞 +1', store.guides[0].likedBy.length === 1);
 
@@ -183,6 +203,16 @@
     ok('切换到组队页', document.querySelector('#page-team').hidden === false && document.querySelector('#page-feed').hidden === true);
     document.querySelectorAll('.tb')[4].click();
     ok('切换到我的页并渲染统计', document.querySelector('#page-me').hidden === false && document.querySelectorAll('#meStats .stat').length === 4);
+
+    /* ---------- J. 清除示例数据（只清 demo，不动用户数据） ---------- */
+    const nRealTeams = store.teams.filter(t => !t.demo).length;
+    document.querySelector('#clearDemoBtn').click();
+    ok('★ 清除后不再有示例队伍/打卡/攻略',
+       !store.teams.some(t => t.demo) && !store.checkins.some(c => c.demo) && !store.guides.some(g => g.demo));
+    ok('清除示例不会误删用户自己发的内容', store.teams.filter(t => !t.demo).length === nRealTeams &&
+        store.teams.some(t => t.title === '周六桌游局'));
+    ok('清除后按钮自动隐藏', document.querySelector('#clearDemoBtn').hidden === true);
+    ok('清除后组队页仍在（只是没有示例项）', document.querySelector('#teamList .row-card').textContent.includes('周六桌游局'));
   }catch(e){
     R.push('FAIL :: 运行异常 ' + (e && e.message));
   }
