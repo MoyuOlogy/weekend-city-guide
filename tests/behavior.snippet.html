@@ -10,8 +10,8 @@
 
     /* ---------- A. 结构渲染 ---------- */
     ok('分类条渲染 11 项（推荐+10类）', document.querySelectorAll('#catbar .cat').length === 11);
-    ok('底部 Tab 有 5 个导航项（发布移到悬浮按钮，光阴/关于收进「我的」）', document.querySelectorAll('.tabbar .tb').length === 5);
-    ok('底部 Tab 不含光阴/关于（否则第 6、7 格太挤）',
+    ok('底部 Tab 有 5 个导航项（发布移到悬浮按钮，日历/关于收进「我的」）', document.querySelectorAll('.tabbar .tb').length === 5);
+    ok('底部 Tab 不含日历/关于（否则第 6、7 格太挤）',
        !document.querySelector('.tb[data-page="calendar"]') && !document.querySelector('.tb[data-page="about"]'));
     ok('信息流渲染出卡片', document.querySelectorAll('#feed .note').length > 0);
     ok('瀑布流为多列', document.querySelectorAll('#feed .mcol').length >= 2);
@@ -67,14 +67,18 @@
     ok('关闭弹层', !document.querySelector('#sheetForm').classList.contains('on'));
 
     /* ---------- D. 点赞 ---------- */
-    const card = document.querySelector('#feed .note');
+    // 注意：首卡 id 会随天气预报变化，而示例数据预先把 a2/a6/a9 设成「已赞」。
+    // 如果直接挑第一张，碰上它已经赞过，第一次点击就是「取消赞」→ 计数 -1。
+    // 所以这里显式挑一张**还没赞过的**卡片，断言才有确定性。
+    const card = [...document.querySelectorAll('#feed .note')].find(n => !iLiked(n.dataset.id))
+              || document.querySelector('#feed .note');
     const actId = card.dataset.id;
     const c0 = likeCount(actId);
     card.querySelector('.like-wrapper').click();
     ok('点赞计数 +1', likeCount(actId) === c0 + 1);
-    ok('点赞按钮进入选中态', document.querySelector('#feed .note .like-wrapper').classList.contains('on'));
+    ok('点赞按钮进入选中态', document.querySelector(`#feed .note[data-id="${actId}"] .like-wrapper`).classList.contains('on'));
     ok('点赞写入 localStorage', localStorage.getItem('wcg.store.v2').includes('"likes"'));
-    document.querySelector('#feed .note .like-wrapper').click();
+    document.querySelector(`#feed .note[data-id="${actId}"] .like-wrapper`).click();
     ok('再次点击取消赞', likeCount(actId) === c0);
 
     /* 卡片点击：桌面路径是「真链接 + 立即打开」，不再有 240ms 延迟与双击点赞劫持 */

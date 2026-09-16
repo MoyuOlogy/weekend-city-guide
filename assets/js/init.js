@@ -6,7 +6,7 @@
 
 /* ---------------- 18. 启动 ---------------- */
 function renderCats(){
-  // 分类纯文字不带图标 —— 与小红书的顶部 Tab 一致，减少视觉噪音
+  // 分类纯文字不带图标 —— 减少视觉噪音
   $('#catbar').innerHTML = ['全部'].concat(TYPES).map(c =>
     `<button class="cat ${c === cat ? 'on' : ''}" data-cat="${c}">${c === '全部' ? '推荐' : c}</button>`).join('');
 }

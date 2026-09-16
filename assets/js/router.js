@@ -8,7 +8,7 @@
 const PAGES = ['feed','calendar','team','checkin','guide','me','about'];
 function go(page){
   PAGES.forEach(p => { const el = $('#page-' + p); if(el) el.hidden = (p !== page); });
-  // 底部 Tab 高亮：光阴 / 关于 在移动端是「我的」下的子页面，
+  // 底部 Tab 高亮：日历 / 关于 在移动端是「我的」下的子页面，
   // 停在它们上面时底部高亮「我的」，否则用户会看到 5 个 Tab 全都不亮、像迷路了。
   const tabPage = (page === 'calendar' || page === 'about') ? 'me' : page;
   $$('.tb').forEach(b => b.classList.toggle('on', b.dataset.page === tabPage));

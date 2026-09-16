@@ -15,7 +15,7 @@
 
 <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
 <defs>
-  <!-- 以下 7 个图标直接取自小红书站点的 SVG symbol 定义（xiaohongshu.txt） -->
+  <!-- 导航类图标：24×24 网格，描边粗细 1.5～1.8 -->
   <symbol id="i-home" viewBox="0 0 24 24"><path d="M20.768 7.934a4 4 0 0 0-1.825-2.153l-5-2.778-.055-.03a4 4 0 0 0-3.83.03l-5 2.778A4 4 0 0 0 3 9.278v7.646q0 .1.005.2A4 4 0 0 0 7 20.924h10q.1 0 .2-.005a4 4 0 0 0 3.8-3.995V9.243a4 4 0 0 0-.232-1.309m-9.776-3.452a2 2 0 0 1 2.016 0l5.2 3.033a2 2 0 0 1 .992 1.728v7.881a2 2 0 0 1-2 2H6.8a2 2 0 0 1-2-2V9.243a2 2 0 0 1 .992-1.728z"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><path d="M11.5 3a8.5 8.5 0 0 1 6.613 13.84l3.023 3.024a.9.9 0 1 1-1.272 1.272l-3.024-3.023A8.5 8.5 0 1 1 11.5 3m0 15.2a6.7 6.7 0 1 0 0-13.4 6.7 6.7 0 0 0 0 13.4"/></symbol>
   <symbol id="i-plus" viewBox="0 0 20 20"><path d="M10 3.334a.75.75 0 0 1 .75.75V9.25h5.167a.75.75 0 1 1 0 1.5H10.75v5.167a.75.75 0 0 1-1.5 0V10.75H4.083a.75.75 0 0 1 0-1.5H9.25V4.084a.75.75 0 0 1 .75-.75"/></symbol>
@@ -39,7 +39,7 @@
   <symbol id="i-import" viewBox="0 0 24 24"><path d="M12 15a1 1 0 0 1-1-1V4.4L8.7 6.7a1 1 0 0 1-1.4-1.4l4-4a1 1 0 0 1 1.4 0l4 4a1 1 0 0 1-1.4 1.4L13 4.4V14a1 1 0 0 1-1 1M4 18a1 1 0 0 1 1 1v1h14v-1a1 1 0 0 1 2 0v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1"/></symbol>
   <symbol id="i-link" viewBox="0 0 24 24"><path d="M10.6 13.4a1 1 0 0 1 0-1.4l4-4a1 1 0 0 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0M7.8 16.2a4 4 0 0 1 0-5.6l3-3a1 1 0 0 1 1.4 1.4l-3 3a2 2 0 0 0 2.8 2.8l3-3a1 1 0 0 1 1.4 1.5l-3 3a4 4 0 0 1-5.6 0m8.4-8.4a4 4 0 0 1 0 5.6l-3 3a1 1 0 0 1-1.4-1.4l3-3a2 2 0 0 0-2.8-2.8l-3 3A1 1 0 0 1 7.6 10l3-3a4 4 0 0 1 5.6 0"/></symbol>
   <symbol id="i-heart-empty" viewBox="0 0 24 24"><path d="M12 20.6 4.9 13.7a5.6 5.6 0 0 1 .005-8 5.9 5.9 0 0 1 4.15-1.65c1.28 0 2.52.41 3.55 1.18a5.9 5.9 0 0 1 3.55-1.18c1.6 0 3.07.6 4.15 1.65a5.6 5.6 0 0 1 0 8z" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
-  <!-- 「关于」用的是小红书站点的 aboutUs 图标 -->
+  <!-- 关于（信息）图标 -->
   <symbol id="i-info" viewBox="0 0 22 22"><path d="M12.1 6.646a1.146 1.146 0 1 1-2.292 0 1.146 1.146 0 0 1 2.292 0M11.95 8.896c.163.153.24.375.21.595l-.817 5.437.414-.099a.688.688 0 0 1 .32 1.338l-1.396.333a.687.687 0 0 1-.84-.764l.822-5.476-.445.088A.687.687 0 1 1 9.949 9l1.395-.278a.69.69 0 0 1 .607.174"/><path d="M20.167 11a9.167 9.167 0 1 1-18.334 0 9.167 9.167 0 0 1 18.334 0m-1.375 0a7.792 7.792 0 1 0-15.584 0 7.792 7.792 0 0 0 15.584 0"/></symbol>
   <!-- 日历：顶栏 + 本体 + 挂环 + 三个点 -->
   <symbol id="i-calendar" viewBox="0 0 24 24"><path d="M4 6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v1H4z"/><path d="M4 9h16v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z"/><path d="M8 2.2h2v4.4H8zM14 2.2h2v4.4h-2z"/><path d="M7.4 12.4h2.2v2.2H7.4zM10.9 12.4h2.2v2.2h-2.2zM14.4 12.4h2.2v2.2h-2.2z" fill="#fff" fill-opacity=".85"/></symbol>
@@ -51,7 +51,7 @@
 <aside class="rail">
   <nav class="rail-nav">
     <button class="rail-item on" data-page="feed"><svg class="ri" width="24" height="24"><use href="#i-home"></use></svg>首页</button>
-    <button class="rail-item" data-page="calendar"><svg class="ri" width="24" height="24"><use href="#i-calendar"></use></svg>光阴</button>
+    <button class="rail-item" data-page="calendar"><svg class="ri" width="24" height="24"><use href="#i-calendar"></use></svg>日历</button>
     <button class="rail-item" data-page="team"><svg class="ri" width="24" height="24"><use href="#i-team"></use></svg>组队</button>
     <button class="rail-item" data-page="checkin"><svg class="ri" width="24" height="24"><use href="#i-pin"></use></svg>打卡</button>
     <button class="rail-item" data-page="guide"><svg class="ri" width="24" height="24"><use href="#i-doc"></use></svg>攻略</button>
@@ -66,7 +66,7 @@
 
 <div class="shell">
 
-<!-- ============ 顶栏（对齐小红书搜索区） ============ -->
+<!-- ============ 顶栏（搜索区） ============ -->
 <header class="topbar">
   <div class="topbar-in">
     <div class="mlogo"><i>周末</i>探索</div>
@@ -95,9 +95,9 @@
   <div class="masonry" id="feed"></div>
 </main>
 
-<!-- ============ 光阴（日历） ============ -->
+<!-- ============ 日历（假期 / 调休 / 天气提醒） ============ -->
 <main id="page-calendar" class="page wrap" hidden>
-  <div class="sec-title">光阴 <small id="calHint"></small></div>
+  <div class="sec-title">日历 <small id="calHint"></small></div>
   <div class="cal-alerts" id="calAlerts"></div>
   <div class="cal-card">
     <div class="cal-head">
@@ -115,69 +115,83 @@
       <span><i class="d-today"></i>今天</span>
     </div>
   </div>
-  <div class="sec-title" style="margin-top:20px">2026 年放假安排 <small>国办发明电〔2025〕7号</small></div>
-  <div class="list cols-2" id="holidayList"></div>
+  <div class="sec-title" style="margin-top:14px">2026 年放假安排 <small>国办发明电〔2025〕7号</small></div>
+  <div class="cal-holidays" id="holidayList"></div>
 </main>
 
 <!-- ============ 关于 ============ -->
 <main id="page-about" class="page wrap" hidden>
   <div class="about">
-    <h1>周末探索 · 周末城市探索指南</h1>
-    <p class="lead">按偏好、天气、预算推荐本地周末活动，支持组队出发、打卡记录、攻略分享，并能在多台设备之间同步。</p>
-    <p class="lead">在线访问：<a href="https://moyuology.github.io/weekend-city-guide/" style="color:var(--red)">moyuology.github.io/weekend-city-guide</a></p>
+    <header class="about-hero">
+      <h1>周末探索</h1>
+      <p>按偏好、天气、预算推荐本地周末活动，支持组队出发、打卡记录、攻略分享，并能在多台设备之间同步。</p>
+      <div class="about-links">
+        <a href="https://moyuology.github.io/weekend-city-guide/" target="_blank" rel="noopener">在线访问</a>
+        <a href="https://github.com/MoyuOlogy/weekend-city-guide" target="_blank" rel="noopener">源码仓库</a>
+      </div>
+    </header>
 
-    <h2>功能</h2>
-    <ul>
-      <li><b>推荐引擎</b>：可解释加权评分 —— 城市、周六/周日、人均预算、同行人数、可支配时长、活动类型、额外偏好（近 / 省 / 出片 / 新手友好）。每条推荐都给出<b>匹配度 %</b>与推荐理由、风险提示，而不是黑箱排序。</li>
-      <li><b>天气联动</b>：接 Open-Meteo 真实预报，按「即将到来的那个周六/周日」取当天数据；下雨自动压低户外权重、优先室内。</li>
-      <li><b>光阴</b>：日历标注周末 / 法定假期 / 调休上班，配上未来 7 天天气预报与出行提醒。</li>
-      <li><b>组队</b>：建队、加入退出、满员进度环、一键复制邀请文案、发起人可解散。</li>
-      <li><b>打卡</b>：地点、日期、花费、时长、心情、感想，自动统计次数 / 总时长 / 总花费 / 去过的地点数。</li>
-      <li><b>攻略</b>：发布、标签、点赞、复制。</li>
-      <li><b>跨设备同步</b>：云端房间（免注册，房间码即钥匙）+ 分享链接 + 导入导出 JSON，三种方式互为兜底。</li>
-    </ul>
+    <section class="about-sec">
+      <h2>功能</h2>
+      <div class="feat-grid">
+        <div class="feat"><b>推荐引擎</b><span>城市 / 预算 / 人数 / 时长 / 偏好多项加权，每条都给出匹配度与理由、风险提示，不是黑箱排序</span></div>
+        <div class="feat"><b>天气联动</b><span>接 Open-Meteo 真实预报，按即将到来的周六 / 周日取数；下雨自动压低户外权重、优先室内</span></div>
+        <div class="feat"><b>日历</b><span>标注周末 / 法定假期 / 调休上班，格子里带未来 7 天天气与出行提醒</span></div>
+        <div class="feat"><b>组队</b><span>建队、加入退出、满员进度环、一键复制邀请文案，发起人可解散</span></div>
+        <div class="feat"><b>打卡</b><span>地点 / 花费 / 时长 / 心情 / 感想，自动统计次数、总时长与总花费</span></div>
+        <div class="feat"><b>攻略</b><span>发布、标签、点赞、复制；标签可点，点了直接跳首页按该标签筛选</span></div>
+        <div class="feat"><b>跨设备同步</b><span>云端房间 + 分享链接 + 导入导出 JSON，三种方式互为兜底</span></div>
+        <div class="feat"><b>收藏</b><span>在推荐里点心形即可收藏，集中显示在「我的」页</span></div>
+      </div>
+    </section>
 
-    <h2>怎么用跨设备同步</h2>
-    <div class="kv-list">
-      <div class="kv-row"><b>云端房间</b><span>顶栏 🌐 → 创建房间 → 把 6 位房间码发给同学；页面每 6 秒自动同步，改动即上传。发布前会先拉取合并（读-改-写），不会用较少的数据抹掉别人的贡献。</span></div>
-      <div class="kv-row"><b>分享链接</b><span>我的 → 生成分享链接：把数据打包进网址，任何设备打开即导入，永久有效、不依赖第三方服务。</span></div>
-      <div class="kv-row"><b>导入导出</b><span>我的 → 导出 JSON 留档、导入 JSON（支持选择文件）恢复。</span></div>
-    </div>
+    <section class="about-sec">
+      <h2>怎么用跨设备同步</h2>
+      <div class="kv-list">
+        <div class="kv-row"><b>云端房间</b><span>创建房间后把 6 位房间码发给同学。页面每 6 秒自动同步、改动即上传；发布前会先拉取合并，不会用较少的数据抹掉别人的贡献。</span></div>
+        <div class="kv-row"><b>分享链接</b><span>把数据打包进网址，任何设备打开即导入，永久有效、不依赖第三方服务。</span></div>
+        <div class="kv-row"><b>导入导出</b><span>导出 JSON 留档；导入 JSON 支持选择文件或直接粘贴。</span></div>
+      </div>
+    </section>
 
-    <h2>技术栈</h2>
-    <p>原生 HTML + CSS + JavaScript，<b>零依赖、零构建</b>，GitHub Pages 静态托管。数据存浏览器 <code>localStorage</code>。</p>
-    <p><code>index.html</code> 只留骨架与引用，样式在 <code>assets/css/</code>（4 个文件），脚本在 <code>assets/js/</code>（20 个模块，与原代码里的注释模块一一对应）。全部用经典 <code>&lt;script defer&gt;</code> 加载，不用 ES module —— module 在 <code>file://</code> 下会被 CORS 挡掉，那样就没法直接双击打开页面了。</p>
-    <div class="kv-list">
-      <div class="kv-row"><b>天气</b><span>Open-Meteo（免费、无需 Key）</span></div>
-      <div class="kv-row"><b>同步</b><span>textdb.dev 公共存储（免注册）</span></div>
-      <div class="kv-row"><b>节假日</b><span>2026 年放假安排：国办发明电〔2025〕7号</span></div>
-      <div class="kv-row"><b>设计规范</b><span>配色、图标、卡片结构、栅格参数取自小红书真实页面（主色 #ff2442，24px 单色矢量图标），全站禁用蓝紫色相</span></div>
-      <div class="kv-row"><b>部署</b><span>GitHub Pages 纯静态托管（不能用服务端语言）；文件名大小写敏感，Windows 本地不敏感</span></div>
-    </div>
+    <section class="about-sec">
+      <h2>技术栈</h2>
+      <div class="kv-list">
+        <div class="kv-row"><b>形态</b><span>原生 HTML + CSS + JavaScript，<b>零依赖、零构建</b>，GitHub Pages 静态托管</span></div>
+        <div class="kv-row"><b>结构</b><span><code>index.html</code> 只留骨架；样式在 <code>assets/css/</code>（4 个），脚本在 <code>assets/js/</code>（20 个模块）</span></div>
+        <div class="kv-row"><b>加载</b><span>经典 <code>&lt;script defer&gt;</code>，不用 ES module —— module 在 <code>file://</code> 下会被 CORS 挡掉，那样就不能直接双击打开页面了</span></div>
+        <div class="kv-row"><b>数据</b><span>浏览器 <code>localStorage</code>，v1 数据自动迁移</span></div>
+        <div class="kv-row"><b>天气</b><span>Open-Meteo（免费、无需 Key）</span></div>
+        <div class="kv-row"><b>同步</b><span>textdb.dev 公共存储（免注册）</span></div>
+        <div class="kv-row"><b>节假日</b><span>2026 年放假安排：国办发明电〔2025〕7号</span></div>
+        <div class="kv-row"><b>视觉</b><span>主色 <code>#ff2442</code>；24×24 单色矢量图标，不用 emoji 做图标；全站禁用蓝紫色相，有自动化断言守着</span></div>
+        <div class="kv-row"><b>部署</b><span>GitHub Pages 纯静态托管（不能跑服务端语言）；文件名大小写敏感，Windows 本地不敏感</span></div>
+      </div>
+    </section>
 
-    <h2>质量验证</h2>
-    <p>用 Edge 无头浏览器真实加载页面、真实发网络请求跑出来的：</p>
-    <ul>
-      <li>颜色审计：断言全站不存在蓝/紫色相（hue 185°–335°）</li>
-      <li>行为测试：渲染 / 筛选 / 搜索 / 点赞 / 详情弹层 / 发布 / 合并与墓碑 / XSS 转义 / 持久化 / 示例数据</li>
-      <li>按钮真实性审计：用真实鼠标事件序列逐个点击，并自动遍历断言不存在「点了没反应」的按钮</li>
-      <li>布局与移动端：iframe 精确视口（375px / 1280px）验证侧栏与底栏切换、列数、横向溢出、弹窗居中与分端尺寸</li>
-      <li>跨设备同步：真连网络验证建房 → 发布 → 清空本地 → 从云端拉回</li>
-    </ul>
-    <div class="note">复现方式：<code>powershell -File tests\run-tests.ps1</code>（需 Node.js + Edge）</div>
+    <section class="about-sec">
+      <h2>质量验证</h2>
+      <p>用 Edge 无头浏览器真实加载页面、真实发网络请求跑出来的，共 5 套：</p>
+      <div class="feat-grid">
+        <div class="feat"><b>颜色审计</b><span>递归扫描全部源码，断言不存在蓝 / 紫色相（hue 185°–335°）</span></div>
+        <div class="feat"><b>行为测试 63 项</b><span>渲染 / 筛选 / 搜索 / 点赞 / 详情弹层 / 发布 / 合并与墓碑 / XSS 转义 / 持久化</span></div>
+        <div class="feat"><b>按钮审计 84 项</b><span>用真实鼠标事件序列逐个点击，断言不存在「点了没反应」的按钮</span></div>
+        <div class="feat"><b>布局与移动端 47 项</b><span>iframe 精确视口验证双端导航、列数、横向溢出、弹窗居中与分端尺寸</span></div>
+        <div class="feat"><b>跨设备同步 17 项</b><span>真连网络验证建房 → 发布 → 清空本地 → 从云端拉回</span></div>
+      </div>
+      <div class="note">复现方式：<code>powershell -File tests\run-tests.ps1</code>（需 Node.js + Edge）</div>
+    </section>
 
-    <h2>已知限制</h2>
-    <ul>
-      <li><b>房间基于公共服务 textdb.dev</b>：房间码即钥匙，任何拿到它的人都能读写，请勿放敏感信息；重要内容请用分享链接或导出 JSON 留档。</li>
-      <li><b>活动是示例数据</b>（16 条内置），封面是 CSS 渐变 + emoji 生成的占位图，没有真实照片。</li>
-      <li>距离为示例值，未接定位与真实通勤时间；无账号体系，昵称仅在本机登记。</li>
-      <li>同步靠轮询（6 秒），不是 WebSocket 实时推送。</li>
-      <li><b>节假日是硬编码的 2026 年安排</b>（来源：国办发明电〔2025〕7号）：跨年后需要更新，这里不会自动跟随。</li>
-      <li><b>图标版权</b>：部分图标路径取自小红书页面的 SVG symbol 定义，仅供本项目学习/原型用途；商用请替换为原创图标。</li>
-    </ul>
-    <p class="lead" style="margin-top:22px">
-      仓库：<a href="https://github.com/MoyuOlogy/weekend-city-guide" target="_blank" rel="noopener" style="color:var(--red)">github.com/MoyuOlogy/weekend-city-guide</a>
-    </p>
+    <section class="about-sec">
+      <h2>已知限制</h2>
+      <ul>
+        <li><b>房间基于公共服务 textdb.dev</b>：房间码即钥匙，任何拿到它的人都能读写，请勿放敏感信息；重要内容请用分享链接或导出 JSON 留档。</li>
+        <li><b>活动是示例数据</b>（16 条内置），封面是 CSS 渐变 + emoji 生成的占位图，没有真实照片。</li>
+        <li>距离为示例值，未接定位与真实通勤时间；无账号体系，昵称仅在本机登记。</li>
+        <li>同步靠轮询（6 秒），不是 WebSocket 实时推送。</li>
+        <li><b>节假日是硬编码的 2026 年安排</b>（国办发明电〔2025〕7号）：跨年后需要更新，不会自动跟随。</li>
+      </ul>
+    </section>
   </div>
 </main>
 
@@ -219,13 +233,13 @@
   <div class="sec-title" style="margin-top:18px">我的数据</div>
   <div class="stats" id="meStats"></div>
 
-  <!-- 「光阴」和「关于」在桌面端已经在左侧栏里了；移动端底部只有 5 格，
+  <!-- 「日历」和「关于」在桌面端已经在左侧栏里了；移动端底部只有 5 格，
        塞不下更多导航，所以这两个子页面的入口统一收到这里。 -->
   <div class="sec-title only-mobile" style="margin-top:18px">更多</div>
   <div class="row-card only-mobile" id="meMore" style="padding:2px 0">
     <button class="mrow" data-page="calendar">
-      <svg class="ri" width="20" height="20"><use href="#i-calendar"></use></svg>光阴
-      <span class="ts">日历 · 假期 · 调休 · 天气</span>
+      <svg class="ri" width="20" height="20"><use href="#i-calendar"></use></svg>日历
+      <span class="ts">假期 · 调休 · 天气提醒</span>
       <svg class="ri ar" width="15" height="15"><use href="#i-arrow"></use></svg>
     </button>
     <button class="mrow" data-page="about">
@@ -262,7 +276,7 @@
   <div class="list cols-2" id="meFavList"></div>
 
   <div class="foot">
-    周末探索 · v2.7 · 天气数据来自 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> ·
+    周末探索 · v2.8 · 天气数据来自 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> ·
     多设备同步基于 <a href="https://textdb.dev/" target="_blank" rel="noopener">textdb.dev</a> 公共存储 + 分享链接<br />
     <a href="https://github.com/MoyuOlogy/weekend-city-guide" target="_blank" rel="noopener">GitHub 仓库</a>
   </div>
@@ -272,7 +286,7 @@
 
 <!-- ============ 底部 Tab（移动端 5 项）+ 悬浮发布按钮 ============ -->
 <!-- 移动端只有 5 格：首页 / 组队 / 打卡 / 攻略 / 我的。
-     「光阴」和「关于」不加进来 —— 详见「我的 → 更多」里的入口。 -->
+     「日历」和「关于」不加进来 —— 详见「我的 → 更多」里的入口。 -->
 <nav class="tabbar">
   <div class="tabbar-in">
     <button class="tb on" data-page="feed"><svg class="ri" width="23" height="23"><use href="#i-home"></use></svg><span>首页</span></button>

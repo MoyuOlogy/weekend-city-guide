@@ -31,7 +31,7 @@
     await waitFor(() => document.querySelectorAll('#feed .note').length > 0, 40);
     inject(document);                       // 先关掉过渡，保证下面的几何量测是最终值
     ok('分类条共 11 项（推荐 + 10 类）', document.querySelectorAll('#catbar .cat').length === 11);
-    ok('分类条为纯文字（无 emoji，与小红书一致）',
+    ok('分类条为纯文字（无 emoji）',
        [...document.querySelectorAll('#catbar .cat')].every(e => !EMOJI.test(e.textContent)));
     ok('顶栏为 sticky', getComputedStyle(document.querySelector('.topbar')).position === 'sticky');
     ok('分类条位于 sticky 容器内部（否则吸不住顶）',
@@ -66,7 +66,7 @@
       const items = [...md.querySelectorAll('.tabbar .tb')], vw = md.documentElement.clientWidth;
       return items.length === 5 && items.every(e => { const r = e.getBoundingClientRect(); return r.right <= vw + 1 && r.left >= -1; });
     })());
-    ok('★ 375px：「我的」页里能看到「更多」（光阴/关于入口）', (() => {
+    ok('★ 375px：「我的」页里能看到「更多」（日历/关于入口）', (() => {
       mw.go('me');                                   // #page-me 默认 hidden，量宽度前必须先切过去
       const box = md.querySelector('#meMore');
       const rows = [...md.querySelectorAll('#meMore .mrow')];
@@ -122,6 +122,30 @@
       const hidden = !!box && dw.getComputedStyle(box).display === 'none';
       dw.go('feed');
       return hidden;
+    })());
+
+    /* v2.8：日历页要求「一进来就能看完日历 / 天气 / 假期提醒」，不用往下滑。
+       直接在 1280×820 的精确视口里量最后一个内容的 bottom，超出视口就是需要滚动。 */
+    ok('★ 1280px：日历页一屏看完，不用滚动', (() => {
+      dw.go('calendar');
+      const vh = dd.documentElement.clientHeight;
+      const alerts = dd.querySelector('#calAlerts').getBoundingClientRect();
+      const grid = dd.querySelector('#calGrid').getBoundingClientRect();
+      const hols = dd.querySelector('#holidayList').getBoundingClientRect();
+      const fits = alerts.top >= 0 && alerts.bottom <= vh &&
+                   grid.bottom <= vh && hols.bottom <= vh - 6;   // 留 6px 呼吸
+      if(!fits) console.log('  日历页超出视口：提醒底 ' + Math.round(alerts.bottom) +
+        ' / 日历底 ' + Math.round(grid.bottom) + ' / 放假安排底 ' + Math.round(hols.bottom) + ' vs 视口 ' + vh);
+      dw.go('feed');
+      return fits;
+    })());
+    ok('★ 1280px：日历页提醒是一行内联（不占多行高度）', (() => {
+      dw.go('calendar');
+      const items = [...dd.querySelectorAll('#calAlerts .cal-alert')];
+      const rows = new Set(items.map(e => Math.round(e.getBoundingClientRect().top)));
+      const single = rows.size === 1 && items.every(e => e.getBoundingClientRect().height <= 32);
+      dw.go('feed');
+      return single;
     })());
 
     /* ============ D. 弹窗：位置一律居中，尺寸/布局分端 ============ */

@@ -178,7 +178,7 @@ document.addEventListener('click', async e => {
     return clearAllData();
   }
   if(t.closest('#clearDemoBtn')) return clearDemo();
-  // 光阴日历
+  // 日历页
   if(t.closest('#calPrev')){ calStep(-1); return; }
   if(t.closest('#calNext')){ calStep(1); return; }
   if(t.closest('#calToday')){ const d = new Date(); calYM = { y:d.getFullYear(), m:d.getMonth() }; renderCalendar(); return toast('已回到本月'); }

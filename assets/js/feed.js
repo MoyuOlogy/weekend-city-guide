@@ -41,7 +41,7 @@ function renderFeed(){
   feed.innerHTML = buckets.map(b => `<div class="mcol">${b.join('')}</div>`).join('');
   observeIn();
 
-  /* 卡片结构对齐小红书 .note-item：cover / title / author-wrapper / like-wrapper
+  /* 卡片结构：cover / title / author-wrapper / like-wrapper
      封面与标题是真正的 <a href="#/note/id"> 链接：可分享、可中键新开标签页、支持浏览器前进后退 */
   function cardHTML(x, i){
     const a = x.a, liked = iLiked(a.id), h = coverHeights[hash(a.id) % coverHeights.length];
@@ -86,14 +86,18 @@ function renderWeatherBar(){
   const bar = $('#weatherBar');
   if(!weather){ bar.textContent = '正在获取天气…'; return; }
   const sat = weather.days[weekendOffset(1)], sun = weather.days[weekendOffset(2)];
-  const dayCard = (w, label) => {
+  // 每天一个胶囊：天气图标 + 周六/周日 + 日期 + 温度 + 降水。完整描述和降水放 title。
+  const dayChip = (w, label) => {
     if(!w) return '';
     const shift = isWorkShift(w.date), hol = holidayOf(w.date);
-    return `<div class="wday${shift ? ' shift' : ''}">
-      <div class="wl">${hol ? hol.name : label}<b>${md(w.date)}</b>${shift ? '<i>调休上班</i>' : ''}</div>
-      <div class="wr"><span class="we">${w.emoji}</span><span class="wt">${w.tmin}~${w.tmax}°</span></div>
-      <div class="wn">${esc(w.label)} · 降水 ${w.pop}%</div>
-    </div>`;
+    const tip = `${w.label} · 降水概率 ${w.pop}%` + (shift ? ' · 这天调休上班' : '');
+    return `<span class="wchip wday${shift ? ' shift' : ''}" title="${esc(tip)}">
+      <span class="we">${w.emoji}</span>
+      <span>${hol ? hol.name : label}</span>
+      <span class="wd">${md(w.date)}</span>
+      <span class="wt">${w.tmin}~${w.tmax}°</span>
+      <span class="wn">降水 ${w.pop}%</span>
+    </span>`;
   };
   const today = ymd(new Date());
   const next = HOLIDAYS.find(h => h.end >= today);
@@ -102,17 +106,14 @@ function renderWeatherBar(){
   let holTxt = '今年假期已过完';
   if(next){
     const dd = dayDiff(today, next.start);
-    holTxt = dd <= 0 ? `${next.name}假期进行中` : `距离「${next.name}」还有 ${dd} 天`;
+    holTxt = dd <= 0 ? `${next.name}假期进行中` : `距「${next.name}」<b>${dd}</b> 天`;
   }
   const shiftSoon = WORK_SHIFT.filter(w => { const dd = dayDiff(today, w); return dd >= 0 && dd <= 7; });
   const wetWeekend = isWet(sat) || isWet(sun);
   bar.innerHTML = `
-    ${dayCard(sat, '周六')}${dayCard(sun, '周日')}
-    <div class="wcount">
-      <div class="wcity"><b>${esc(prefs.city)}</b><i>未来 7 天</i></div>
-      <div>距离周末 <b>${weekTxt}</b></div>
-      <div>${esc(holTxt)}</div>
-      <div>${wetWeekend ? '☔ 优先安排室内' : '☀️ 适合户外活动'}</div>
-      ${shiftSoon.length ? `<div style="color:var(--amber)">${md(shiftSoon[0])}（${WEEK_CN[toDate(shiftSoon[0]).getDay()]}）调休上班</div>` : ''}
-    </div>`;
+    <span class="wchip city" title="天气按这个城市取"><svg class="ri" width="14" height="14"><use href="#i-pin"></use></svg>${esc(prefs.city)}</span>
+    ${dayChip(sat, '周六')}${dayChip(sun, '周日')}
+    <span class="wchip meta">距周末 <b>${weekTxt}</b> · ${holTxt}</span>
+    <span class="wchip meta">${wetWeekend ? '☔ 优先室内' : '☀️ 适合户外'}</span>
+    ${shiftSoon.length ? `<span class="wchip shift"><svg class="ri" width="14" height="14"><use href="#i-bell"></use></svg>${md(shiftSoon[0])} ${WEEK_CN[toDate(shiftSoon[0]).getDay()]} 调休上班</span>` : ''}`;
 }

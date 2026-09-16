@@ -4,7 +4,7 @@
  * 内容是搬运而非重写。要改某个功能，改对应文件即可，不用翻整个 index.html。
  */
 
-/* ================= 桌面左侧导航（对齐小红书 side-bar） ================= */
+/* ================= 桌面左侧导航 ================= */
 /* 导航整体垂直居中（不再有 logo 与版本页脚，那些信息移到「关于」页） */
 .rail{
   display:none;position:fixed;left:0;top:0;bottom:0;width:var(--rail);z-index:50;
@@ -24,7 +24,7 @@
 .shell{min-height:100vh}
 @media(min-width:1024px){ .shell{margin-left:var(--rail)} .rail{display:flex} }
 
-/* ================= 顶栏（对齐小红书搜索区） ================= */
+/* ================= 顶栏（搜索区） ================= */
 /* 分类条必须与搜索栏同处一个 sticky 容器：sticky 元素被限制在父容器范围内 */
 .topbar{
   position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--bg) 94%,transparent);
@@ -62,7 +62,7 @@
 .icon-btn:hover{background:var(--hover);color:var(--text)}
 .icon-btn:active{transform:scale(.93)}
 
-/* ================= 分类条（对齐小红书 channel） ================= */
+/* ================= 分类条 ================= */
 .catbar{position:static;border-bottom:1px solid var(--line)}
 .catbar-in{
   max-width:1180px;margin:0 auto;display:flex;justify-content:center;gap:32px;overflow-x:auto;
