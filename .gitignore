@@ -13,3 +13,6 @@ tests/_shot-*
 
 # 本地工作区元数据（助手记忆等），不属于项目产物
 .workbuddy/
+
+# 临时提交信息文件
+.commitmsg.tmp

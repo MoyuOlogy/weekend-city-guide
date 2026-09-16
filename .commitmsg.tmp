@@ -1,4 +1,0 @@
-docs: 补记 .ps1 的 UTF-8 BOM 坑（无 BOM 会被 CP936 解码致脚本解析失败），并把 .workbuddy/ 加入忽略
-
-- README「测试踩坑」新增两条：`.ps1` 必须带 BOM；诊断信息一律落盘再看（stdout 再接一层 PowerShell 会把乱码带回来）
-- .gitignore 忽略 .workbuddy/（本地工作区元数据，不属于项目产物）
